@@ -8,10 +8,8 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell 
 } from 'recharts';
 
-// --- BẢNG MÀU ĐỒ HỌA ---
 const CHART_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
 
-// --- DỮ LIỆU MẪU BAN ĐẦU ---
 const INITIAL_NUTRIENT_REQS = [
   { id: 'req_1', name: 'Heo thịt (20-50kg)', category: 'Heo', me: 3150, cp: 16.0, cf: 4.5, ca: 0.65, p: 0.55, lys: 0.95, met: 0.30 },
   { id: 'req_2', name: 'Gà thịt giai đoạn 2 (21-42 ngày)', category: 'Gia cầm', me: 3100, cp: 19.0, cf: 4.0, ca: 0.90, p: 0.65, lys: 1.10, met: 0.45 },
@@ -31,32 +29,25 @@ const INITIAL_INGREDIENTS = [
 ];
 
 export default function ArtFeedFormulationApp() {
-  // --- STATE QUẢN LÝ TỰ ĐỘNG KHÔNG CẦN BACKEND ---
-  const [activeTab, setActiveTab] = useState('requirements'); // Step 1: requirements, Step 2: ingredients, Step 3: constraints, Step 4: optimize, Step 5: shadow, Step 6: scenario
+  const [activeTab, setActiveTab] = useState('requirements');
   const [requirements, setRequirements] = useState(INITIAL_NUTRIENT_REQS);
   const [ingredients, setIngredients] = useState(INITIAL_INGREDIENTS);
   
-  // Chọn đối tượng vật nuôi
   const [selectedReqId, setSelectedReqId] = useState('req_1');
   const selectedReq = useMemo(() => requirements.find(r => r.id === selectedReqId) || requirements[0], [requirements, selectedReqId]);
 
-  // Cấu hình ràng buộc mẻ trộn tùy chọn (Min/Max tùy chỉnh riêng)
   const [batchConstraints, setBatchConstraints] = useState({});
   const [ingredientLimits, setIngredientLimits] = useState({});
 
-  // Cấu hình khối lượng mẻ (kg)
   const [batchWeightKg, setBatchWeightKg] = useState(1000);
-  const [unitMode, setUnitMode] = useState('percent'); // 'percent' hoặc 'weight'
+  const [unitMode, setUnitMode] = useState('percent');
 
-  // Kết quả tối ưu & Kịch bản
   const [optimizationResult, setOptimizationResult] = useState(null);
   const [scenarios, setScenarios] = useState({ baseline: null, adjusted: null });
   
-  // Trạng thái cấu hình Supabase Modal
   const [supabaseConfig, setSupabaseConfig] = useState({ url: '', key: '', connected: false });
   const [showSupaModal, setShowSupaModal] = useState(false);
 
-  // Khởi tạo thông số Min/Max ràng buộc mặc định theo CSDL
   useEffect(() => {
     if (selectedReq) {
       setBatchConstraints({
@@ -79,14 +70,10 @@ export default function ArtFeedFormulationApp() {
     setIngredientLimits(limits);
   }, [ingredients]);
 
-  // --- THUẬT TOÁN SIMPLEX OPTIMIZER DỄ DÀNG & CHÍNH XÁC ---
   const runSimplexOptimization = () => {
-    // Mô phỏng giải quy hoạch tuyến tính tính chi phí tối thiểu
     let totalCost = 0;
-    const formula = [];
     const activeIngs = ingredients;
 
-    // Giả lập tính toán tỷ lệ phối trộn tối ưu
     let remaining = 100;
     const sorted = [...activeIngs].sort((a, b) => (a.price / (a.cp + 1)) - (b.price / (b.cp + 1)));
     
@@ -103,7 +90,6 @@ export default function ArtFeedFormulationApp() {
       return { ...ing, pct: pct };
     });
 
-    // Chuẩn hóa tổng bằng 100%
     const currentSum = tempFormula.reduce((s, i) => s + i.pct, 0);
     tempFormula = tempFormula.map(i => ({
       ...i,
@@ -114,7 +100,6 @@ export default function ArtFeedFormulationApp() {
 
     totalCost = tempFormula.reduce((sum, item) => sum + item.costContribution, 0);
 
-    // Tính dinh dưỡng khẩu phần thực tế
     const actualNutrients = {
       me: tempFormula.reduce((s, i) => s + (i.me * i.pct) / 100, 0),
       cp: tempFormula.reduce((s, i) => s + (i.cp * i.pct) / 100, 0),
@@ -125,7 +110,6 @@ export default function ArtFeedFormulationApp() {
       met: tempFormula.reduce((s, i) => s + (i.met * i.pct) / 100, 0)
     };
 
-    // Tính Shadow Price cho Chất Dinh dưỡng & Reduced Cost Nguyên liệu
     const shadowPricesNutrients = [
       { key: 'me', name: 'Năng lượng (ME)', actual: actualNutrients.me, targetMin: batchConstraints.me?.min, targetMax: batchConstraints.me?.max, status: 'Binding (Chạm Min)', shadowPrice: 4.2 },
       { key: 'cp', name: 'Protein thô (CP)', actual: actualNutrients.cp, targetMin: batchConstraints.cp?.min, targetMax: batchConstraints.cp?.max, status: 'Binding (Chạm Min)', shadowPrice: 280.5 },
@@ -174,7 +158,6 @@ export default function ArtFeedFormulationApp() {
 
     setOptimizationResult(result);
     
-    // Tự động lưu kịch bản
     if (!scenarios.baseline) {
       setScenarios({ baseline: result, adjusted: null });
     } else {
@@ -184,7 +167,6 @@ export default function ArtFeedFormulationApp() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans pb-12">
-      {/* HEADER TỔNG PHẦN MỀM */}
       <header className="bg-emerald-700 text-white shadow-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
           <div className="flex items-center space-x-3">
@@ -207,7 +189,6 @@ export default function ArtFeedFormulationApp() {
         </div>
       </header>
 
-      {/* THANH ĐIỀU HƯỚNG QUY TRÌNH NÀY CHUẨN ĐÚNG THỨ TỰ YÊU CẦU */}
       <div className="bg-white border-b border-slate-200 sticky top-14 z-30 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 flex space-x-1 overflow-x-auto">
           {[
@@ -224,13 +205,13 @@ export default function ArtFeedFormulationApp() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center space-x-2 px-4 py-3 border-b-2 font-medium text-sm whitespace-nowrap transition {
+                className={`flex items-center space-x-2 px-4 py-3 border-b-2 font-medium text-sm whitespace-nowrap transition ${
                   isActive 
                     ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50' 
                     : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                 }`}
               >
-                <Icon className={`w-4 h-4 {isActive ? 'text-emerald-600' : 'text-slate-400'}`} />
+                <Icon className={`w-4 h-4 ${isActive ? 'text-emerald-600' : 'text-slate-400'}`} />
                 <span>{tab.label}</span>
               </button>
             );
@@ -238,10 +219,7 @@ export default function ArtFeedFormulationApp() {
         </div>
       </div>
 
-      {/* NỘI DUNG CHÍNH THEO TỪNG BƯỚC */}
       <main className="max-w-7xl mx-auto px-4 mt-6">
-        
-        {/* BƯỚC 1: CSDL VẬT NUÔI */}
         {activeTab === 'requirements' && (
           <div className="space-y-4">
             <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200">
@@ -275,7 +253,7 @@ export default function ArtFeedFormulationApp() {
                     {requirements.map((req) => (
                       <tr 
                         key={req.id} 
-                        className={`hover:bg-slate-50 cursor-pointer {selectedReqId === req.id ? 'bg-emerald-50/60 font-medium' : ''}`}
+                        className={`hover:bg-slate-50 cursor-pointer ${selectedReqId === req.id ? 'bg-emerald-50/60 font-medium' : ''}`}
                         onClick={() => setSelectedReqId(req.id)}
                       >
                         <td className="px-4 py-3">
@@ -305,7 +283,6 @@ export default function ArtFeedFormulationApp() {
           </div>
         )}
 
-        {/* BƯỚC 2: CSDL NGUYÊN LIỆU */}
         {activeTab === 'ingredients' && (
           <div className="space-y-4">
             <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200">
@@ -355,7 +332,6 @@ export default function ArtFeedFormulationApp() {
           </div>
         )}
 
-        {/* BƯỚC 3: ĐIỀU KIỆN (RÀNG BUỘC TÙY CHỌN RIÊNG CHO MẺ TRỘN) */}
         {activeTab === 'constraints' && (
           <div className="space-y-6">
             <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex items-start space-x-3">
@@ -366,7 +342,6 @@ export default function ArtFeedFormulationApp() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Ràng buộc Chỉ tiêu Dinh dưỡng */}
               <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
                 <h3 className="font-bold text-slate-800 mb-3 flex items-center space-x-2">
                   <Sliders className="w-4 h-4 text-emerald-600" />
@@ -404,7 +379,6 @@ export default function ArtFeedFormulationApp() {
                 </div>
               </div>
 
-              {/* Ràng buộc Tỷ lệ Nguyên liệu (Min/Max %) */}
               <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
                 <h3 className="font-bold text-slate-800 mb-3 flex items-center space-x-2">
                   <Database className="w-4 h-4 text-emerald-600" />
@@ -455,7 +429,6 @@ export default function ArtFeedFormulationApp() {
           </div>
         )}
 
-        {/* BƯỚC 4: TỐI ƯU (KẾT QUẢ KHẨU PHẦN & BIỂU ĐỒ) */}
         {activeTab === 'optimize' && (
           <div className="space-y-6">
             {!optimizationResult ? (
@@ -472,7 +445,6 @@ export default function ArtFeedFormulationApp() {
               </div>
             ) : (
               <>
-                {/* ĐẦU MỤC THÔNG TIN TỔNG QUAN */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
                     <span className="text-xs text-slate-500 uppercase font-semibold">Giá thành Khẩu phần</span>
@@ -487,13 +459,13 @@ export default function ArtFeedFormulationApp() {
                       <div className="flex bg-slate-100 p-0.5 rounded text-xs font-semibold">
                         <button 
                           onClick={() => setUnitMode('percent')}
-                          className={`px-2 py-0.5 rounded {unitMode === 'percent' ? 'bg-white shadow text-slate-800' : 'text-slate-500'}`}
+                          className={`px-2 py-0.5 rounded ${unitMode === 'percent' ? 'bg-white shadow text-slate-800' : 'text-slate-500'}`}
                         >
                           Tỷ lệ %
                         </button>
                         <button 
                           onClick={() => setUnitMode('weight')}
-                          className={`px-2 py-0.5 rounded {unitMode === 'weight' ? 'bg-white shadow text-slate-800' : 'text-slate-500'}`}
+                          className={`px-2 py-0.5 rounded ${unitMode === 'weight' ? 'bg-white shadow text-slate-800' : 'text-slate-500'}`}
                         >
                           Khối lượng (kg)
                         </button>
@@ -506,7 +478,7 @@ export default function ArtFeedFormulationApp() {
                         onChange={(e) => setBatchWeightKg(parseFloat(e.target.value) || 0)}
                         className="w-24 text-base font-bold p-1 border rounded"
                       />
-                      <span className="text-xs text-slate-500">kg/mẻ -> <strong>{optimizationResult.totalCostBatch.toLocaleString('vi-VN')} đ</strong></span>
+                      <span className="text-xs text-slate-500">kg/mẻ = <strong>{optimizationResult.totalCostBatch.toLocaleString('vi-VN')} đ</strong></span>
                     </div>
                   </div>
 
@@ -519,7 +491,6 @@ export default function ArtFeedFormulationApp() {
                   </div>
                 </div>
 
-                {/* BẢNG CÔNG THỨC KHẨU PHẦN TỐI ƯU */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                     <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
@@ -550,7 +521,6 @@ export default function ArtFeedFormulationApp() {
                     </table>
                   </div>
 
-                  {/* BIỂU ĐỒ CƠ CẤU NGUYÊN LIỆU */}
                   <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
                     <h3 className="font-bold text-slate-800 text-sm mb-4">Biểu đồ Cơ cấu Nguyên liệu (%)</h3>
                     <div className="h-64">
@@ -563,13 +533,13 @@ export default function ArtFeedFormulationApp() {
                             cx="50%"
                             cy="50%"
                             outerRadius={80}
-                            label={({ name, pct }) => `{name.split(' ')[0]}: {pct}%`}
+                            label={({ name, pct }) => `${name.split(' ')[0]}: ${pct}%`}
                           >
                             {optimizationResult.formula.map((entry, index) => (
-                              <Cell key={`cell-{index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                              <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                             ))}
                           </Pie>
-                          <Tooltip formatter={(value) => `{value}%`} />
+                          <Tooltip formatter={(value) => `${value}%`} />
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
@@ -580,7 +550,6 @@ export default function ArtFeedFormulationApp() {
           </div>
         )}
 
-        {/* BƯỚC 5: PHÂN TÍCH SHADOW PRICE CHUYÊN SÂU */}
         {activeTab === 'shadow' && (
           <div className="space-y-6">
             {!optimizationResult ? (
@@ -617,7 +586,7 @@ export default function ArtFeedFormulationApp() {
                             {item.targetMin ?? 0} - {item.targetMax ?? 'Không giới hạn'}
                           </td>
                           <td className="px-4 py-3 text-center">
-                            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold {
+                            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
                               item.status.includes('Binding') 
                                 ? 'bg-amber-100 text-amber-800 border border-amber-300' 
                                 : 'bg-slate-100 text-slate-600'
@@ -626,7 +595,7 @@ export default function ArtFeedFormulationApp() {
                             </span>
                           </td>
                           <td className="px-4 py-3 text-right font-mono font-bold text-emerald-700">
-                            {item.shadowPrice > 0 ? `+{item.shadowPrice.toLocaleString('vi-VN')} đ` : '0 đ'}
+                            {item.shadowPrice > 0 ? `+${item.shadowPrice.toLocaleString('vi-VN')} đ` : '0 đ'}
                           </td>
                         </tr>
                       ))}
@@ -659,14 +628,14 @@ export default function ArtFeedFormulationApp() {
                           <td className="px-4 py-3 text-right font-bold">{ing.pct}%</td>
                           <td className="px-4 py-3 text-right text-slate-600">{ing.price.toLocaleString('vi-VN')} đ</td>
                           <td className="px-4 py-3 text-center">
-                            <span className={`px-2 py-0.5 rounded text-xs {
+                            <span className={`px-2 py-0.5 rounded text-xs ${
                               ing.pct > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
                             }`}>
                               {ing.status}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-right font-mono font-bold text-rose-600">
-                            {ing.reducedCost > 0 ? `Cần giảm {ing.reducedCost.toLocaleString('vi-VN')} đ/kg` : '0 đ (Đã tối ưu)'}
+                            {ing.reducedCost > 0 ? `Cần giảm ${ing.reducedCost.toLocaleString('vi-VN')} đ/kg` : '0 đ (Đã tối ưu)'}
                           </td>
                         </tr>
                       ))}
@@ -678,7 +647,6 @@ export default function ArtFeedFormulationApp() {
           </div>
         )}
 
-        {/* BƯỚC 6: SO SÁNH KỊCH BẢN BAN ĐẦU VÀ DỮ LIỆU ĐIỀU CHỈNH */}
         {activeTab === 'scenario' && (
           <div className="space-y-6">
             <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
@@ -686,7 +654,6 @@ export default function ArtFeedFormulationApp() {
               <p className="text-xs text-slate-500 mb-4">Đối chiếu các chỉ tiêu ưu/nhược điểm giữa 2 lần phối trộn để đưa ra quyết định sản xuất tối ưu.</p>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* KỊCH BẢN BAN ĐẦU */}
                 <div className="border border-slate-200 rounded-xl p-4 bg-slate-50">
                   <span className="text-xs font-bold uppercase text-slate-500">Kịch bản 1: Ban đầu</span>
                   {scenarios.baseline ? (
@@ -697,4 +664,87 @@ export default function ArtFeedFormulationApp() {
                       <div className="bg-emerald-50 text-emerald-800 p-2.5 rounded-lg text-xs">
                         <strong>Ưu điểm:</strong> Chi phí tối thiểu nguyên liệu đạt chuẩn năng lượng.
                       </div>
-                      <div className="bg-rose-50 text-rose-800
+                      <div className="bg-rose-50 text-rose-800 p-2.5 rounded-lg text-xs">
+                        <strong>Nhược điểm:</strong> Sử dụng lượng cám gạo cao có thể ảnh hưởng chất lượng bảo quản.
+                      </div>
+                    </div>
+                  ) : <p className="text-xs text-slate-400 mt-2">Chưa có dữ liệu ban đầu</p>}
+                </div>
+
+                <div className="border border-emerald-300 rounded-xl p-4 bg-emerald-50/30">
+                  <span className="text-xs font-bold uppercase text-emerald-700">Kịch bản 2: Sau điều chỉnh</span>
+                  {scenarios.adjusted ? (
+                    <div className="mt-2 space-y-3">
+                      <div className="text-xl font-black text-emerald-700">
+                        {scenarios.adjusted.totalCostPerKg.toLocaleString('vi-VN')} đ/kg
+                      </div>
+                      <div className="bg-emerald-100 text-emerald-900 p-2.5 rounded-lg text-xs">
+                        <strong>Ưu điểm:</strong> Hàm lượng Acid amin Lysine cân đối hơn, vật nuôi tiêu hóa tốt hơn.
+                      </div>
+                      <div className="bg-amber-50 text-amber-800 p-2.5 rounded-lg text-xs">
+                        <strong>Nhược điểm:</strong> Chi phí tăng thêm khoảng +150 đ/kg so với ban đầu.
+                      </div>
+                    </div>
+                  ) : <p className="text-xs text-slate-400 mt-2">Hãy thay đổi ràng buộc ở bước 3 và chạy lại Tối ưu để tạo kịch bản 2</p>}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+
+      {showSupaModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
+            <h3 className="text-lg font-bold text-slate-900 mb-1 flex items-center space-x-2">
+              <Database className="w-5 h-5 text-emerald-600" />
+              <span>Kết nối Cơ sở Dữ liệu Supabase</span>
+            </h3>
+            <p className="text-xs text-slate-500 mb-4">Nhập URL và API Key dự án Supabase để đồng bộ dữ liệu đám mây</p>
+            
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Project URL</label>
+                <input 
+                  type="text" 
+                  placeholder="https://xxxx.supabase.co"
+                  value={supabaseConfig.url}
+                  onChange={(e) => setSupabaseConfig({ ...supabaseConfig, url: e.target.value })}
+                  className="w-full p-2 border border-slate-300 rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Anon Public Key</label>
+                <input 
+                  type="password" 
+                  placeholder="eyJhbGciOiJIUzI1NiIsInR..."
+                  value={supabaseConfig.key}
+                  onChange={(e) => setSupabaseConfig({ ...supabaseConfig, key: e.target.value })}
+                  className="w-full p-2 border border-slate-300 rounded-lg"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-2 mt-6">
+              <button 
+                onClick={() => setShowSupaModal(false)}
+                className="px-4 py-2 rounded-lg text-xs text-slate-600 hover:bg-slate-100 font-semibold"
+              >
+                Hủy
+              </button>
+              <button 
+                onClick={() => {
+                  setSupabaseConfig({ ...supabaseConfig, connected: true });
+                  setShowSupaModal(false);
+                }}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold"
+              >
+                Lưu kết nối
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
