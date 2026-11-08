@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Database, Scale, Calculator, TrendingUp, Cpu, Sliders, Play, Plus, Trash2, 
-  Edit3, Check, RefreshCw, BarChart2, DollarSign, Layers, ArrowRightLeft, 
-  HelpCircle, Settings, ShieldCheck, AlertCircle, Info, FileSpreadsheet, X
+  Database, Scale, Calculator, TrendingUp, Sliders, Play, Plus, Trash2, 
+  Edit3, Check, RefreshCw, BarChart2, DollarSign, ArrowRightLeft, 
+  Info, X
 } from 'lucide-react';
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell 
+  ResponsiveContainer, PieChart, Pie, Cell, Tooltip 
 } from 'recharts';
 
 const CHART_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
@@ -34,7 +34,9 @@ export default function ArtFeedFormulationApp() {
   const [ingredients, setIngredients] = useState(INITIAL_INGREDIENTS);
   
   const [selectedReqId, setSelectedReqId] = useState('req_1');
-  const selectedReq = useMemo(() => requirements.find(r => r.id === selectedReqId) || requirements[0], [requirements, selectedReqId]);
+  const selectedReq = useMemo(() => {
+    return requirements.find(r => r.id === selectedReqId) || requirements[0] || INITIAL_NUTRIENT_REQS[0];
+  }, [requirements, selectedReqId]);
 
   const [batchConstraints, setBatchConstraints] = useState({});
   const [ingredientLimits, setIngredientLimits] = useState({});
@@ -48,25 +50,26 @@ export default function ArtFeedFormulationApp() {
   const [supabaseConfig, setSupabaseConfig] = useState({ url: '', key: '', connected: false });
   const [showSupaModal, setShowSupaModal] = useState(false);
 
-  // --- MODAL NHẬP ĐỒNG BỘ NGUYÊN LIỆU VÀ NHU CẦU ---
+  // Modal thêm/sửa vật nuôi
   const [showReqModal, setShowReqModal] = useState(false);
-  const [editingReq, setEditingReq] = useState(null);
+  const [editingReqId, setEditingReqId] = useState(null);
   const [reqForm, setReqForm] = useState({ name: '', category: 'Heo', me: 3000, cp: 16, cf: 5, ca: 0.7, p: 0.5, lys: 0.8, met: 0.3 });
 
+  // Modal thêm/sửa nguyên liệu
   const [showIngModal, setShowIngModal] = useState(false);
-  const [editingIng, setEditingIng] = useState(null);
+  const [editingIngId, setEditingIngId] = useState(null);
   const [ingForm, setIngForm] = useState({ name: '', price: 10000, me: 3000, cp: 10, cf: 3, ca: 0.1, p: 0.2, lys: 0.3, met: 0.1, minLimit: 0, maxLimit: 100 });
 
   useEffect(() => {
     if (selectedReq) {
       setBatchConstraints({
-        me: { min: selectedReq.me, max: selectedReq.me * 1.1 },
-        cp: { min: selectedReq.cp, max: selectedReq.cp * 1.15 },
-        cf: { min: 0, max: selectedReq.cf },
-        ca: { min: selectedReq.ca, max: selectedReq.ca * 1.3 },
-        p: { min: selectedReq.p, max: selectedReq.p * 1.3 },
-        lys: { min: selectedReq.lys, max: selectedReq.lys * 1.2 },
-        met: { min: selectedReq.met, max: selectedReq.met * 1.2 }
+        me: { min: selectedReq.me || 0, max: (selectedReq.me || 0) * 1.1 },
+        cp: { min: selectedReq.cp || 0, max: (selectedReq.cp || 0) * 1.15 },
+        cf: { min: 0, max: selectedReq.cf || 0 },
+        ca: { min: selectedReq.ca || 0, max: (selectedReq.ca || 0) * 1.3 },
+        p: { min: selectedReq.p || 0, max: (selectedReq.p || 0) * 1.3 },
+        lys: { min: selectedReq.lys || 0, max: (selectedReq.lys || 0) * 1.2 },
+        met: { min: selectedReq.met || 0, max: (selectedReq.met || 0) * 1.2 }
       });
     }
   }, [selectedReqId, selectedReq]);
@@ -79,25 +82,26 @@ export default function ArtFeedFormulationApp() {
     setIngredientLimits(limits);
   }, [ingredients]);
 
-  // Xử lý Thêm / Sửa / Xóa Nhu cầu Vật nuôi
+  // Thêm / Sửa Vật nuôi
   const handleSaveReq = (e) => {
     e.preventDefault();
     if (!reqForm.name) return;
-    if (editingReq) {
-      setRequirements(requirements.map(r => r.id === editingReq.id ? { ...reqForm, id: editingReq.id } : r));
+    if (editingReqId) {
+      setRequirements(prev => prev.map(r => r.id === editingReqId ? { ...reqForm, id: editingReqId } : r));
     } else {
-      const newReq = { ...reqForm, id: `req_${Date.now()}` };
-      setRequirements([...requirements, newReq]);
-      setSelectedReqId(newReq.id);
+      const newId = `req_${Date.now()}`;
+      const newReq = { ...reqForm, id: newId };
+      setRequirements(prev => [...prev, newReq]);
+      setSelectedReqId(newId);
     }
     setShowReqModal(false);
-    setEditingReq(null);
+    setEditingReqId(null);
   };
 
   const handleDeleteReq = (id, e) => {
     e.stopPropagation();
     if (requirements.length <= 1) {
-      alert('Phải giữ lại ít nhất 1 nhu cầu vật nuôi!');
+      alert('Cần giữ lại ít nhất 1 chỉ tiêu vật nuôi!');
       return;
     }
     const filtered = requirements.filter(r => r.id !== id);
@@ -105,26 +109,26 @@ export default function ArtFeedFormulationApp() {
     if (selectedReqId === id) setSelectedReqId(filtered[0].id);
   };
 
-  // Xử lý Thêm / Sửa / Xóa Nguyên liệu
+  // Thêm / Sửa Nguyên liệu
   const handleSaveIng = (e) => {
     e.preventDefault();
     if (!ingForm.name) return;
-    if (editingIng) {
-      setIngredients(ingredients.map(i => i.id === editingIng.id ? { ...ingForm, id: editingIng.id } : i));
+    if (editingIngId) {
+      setIngredients(prev => prev.map(i => i.id === editingIngId ? { ...ingForm, id: editingIngId } : i));
     } else {
       const newIng = { ...ingForm, id: `ing_${Date.now()}` };
-      setIngredients([...ingredients, newIng]);
+      setIngredients(prev => [...prev, newIng]);
     }
     setShowIngModal(false);
-    setEditingIng(null);
+    setEditingIngId(null);
   };
 
   const handleDeleteIng = (id) => {
     if (ingredients.length <= 2) {
-      alert('Phải giữ lại ít nhất 2 nguyên liệu để phối trộn!');
+      alert('Cần giữ lại ít nhất 2 nguyên liệu để phối trộn!');
       return;
     }
-    setIngredients(ingredients.filter(i => i.id !== id));
+    setIngredients(prev => prev.filter(i => i.id !== id));
   };
 
   const runSimplexOptimization = () => {
@@ -147,7 +151,7 @@ export default function ArtFeedFormulationApp() {
       return { ...ing, pct: pct };
     });
 
-    const currentSum = tempFormula.reduce((s, i) => s + i.pct, 0);
+    const currentSum = tempFormula.reduce((s, i) => s + i.pct, 0) || 1;
     tempFormula = tempFormula.map(i => ({
       ...i,
       pct: Number(((i.pct / currentSum) * 100).toFixed(2)),
@@ -286,7 +290,7 @@ export default function ArtFeedFormulationApp() {
               </div>
               <button 
                 onClick={() => {
-                  setEditingReq(null);
+                  setEditingReqId(null);
                   setReqForm({ name: '', category: 'Heo', me: 3000, cp: 16, cf: 5, ca: 0.7, p: 0.5, lys: 0.8, met: 0.3 });
                   setShowReqModal(true);
                 }}
@@ -344,7 +348,7 @@ export default function ArtFeedFormulationApp() {
                             <button 
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setEditingReq(req);
+                                setEditingReqId(req.id);
                                 setReqForm({ ...req });
                                 setShowReqModal(true);
                               }}
@@ -378,7 +382,7 @@ export default function ArtFeedFormulationApp() {
               </div>
               <button 
                 onClick={() => {
-                  setEditingIng(null);
+                  setEditingIngId(null);
                   setIngForm({ name: '', price: 10000, me: 3000, cp: 10, cf: 3, ca: 0.1, p: 0.2, lys: 0.3, met: 0.1, minLimit: 0, maxLimit: 100 });
                   setShowIngModal(true);
                 }}
@@ -421,7 +425,7 @@ export default function ArtFeedFormulationApp() {
                           <div className="flex items-center justify-center space-x-2">
                             <button 
                               onClick={() => {
-                                setEditingIng(ing);
+                                setEditingIngId(ing.id);
                                 setIngForm({ ...ing });
                                 setShowIngModal(true);
                               }}
@@ -451,7 +455,7 @@ export default function ArtFeedFormulationApp() {
             <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex items-start space-x-3">
               <Info className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
               <p className="text-xs text-amber-800 leading-relaxed">
-                <strong>Khu vực Ràng buộc Tùy chỉnh Mẻ trộn:</strong> Bạn có thể tự do điều chỉnh Min/Max riêng cho từng mẻ phối trộn tại đây mà <strong>không ảnh hưởng đến CSDL gốc</strong>. Nếu để trống hoặc không điền, phần mềm sẽ hiểu là không đặt giới hạn (Tự do).
+                <strong>Khu vực Ràng buộc Tùy chỉnh Mẻ trộn:</strong> Điều chỉnh Min/Max riêng cho mẻ phối trộn tại đây mà <strong>không ảnh hưởng đến CSDL gốc</strong>.
               </p>
             </div>
 
@@ -459,7 +463,7 @@ export default function ArtFeedFormulationApp() {
               <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
                 <h3 className="font-bold text-slate-800 mb-3 flex items-center space-x-2">
                   <Sliders className="w-4 h-4 text-emerald-600" />
-                  <span>1. Giới hạn Dinh dưỡng Mẻ trộn ({selectedReq.name})</span>
+                  <span>1. Giới hạn Dinh dưỡng ({selectedReq?.name})</span>
                 </h3>
                 <div className="space-y-3">
                   {Object.keys(batchConstraints).map((key) => (
@@ -468,24 +472,24 @@ export default function ArtFeedFormulationApp() {
                       <div className="flex items-center space-x-2">
                         <input 
                           type="number" 
-                          placeholder="Min (Tùy chọn)"
+                          placeholder="Min"
                           value={batchConstraints[key]?.min ?? ''} 
                           onChange={(e) => setBatchConstraints({
                             ...batchConstraints,
                             [key]: { ...batchConstraints[key], min: e.target.value === '' ? '' : parseFloat(e.target.value) }
                           })}
-                          className="w-28 text-xs p-1.5 border border-slate-300 rounded text-center focus:ring-emerald-500"
+                          className="w-28 text-xs p-1.5 border border-slate-300 rounded text-center"
                         />
                         <span className="text-xs text-slate-400">-</span>
                         <input 
                           type="number" 
-                          placeholder="Max (Tùy chọn)"
+                          placeholder="Max"
                           value={batchConstraints[key]?.max ?? ''} 
                           onChange={(e) => setBatchConstraints({
                             ...batchConstraints,
                             [key]: { ...batchConstraints[key], max: e.target.value === '' ? '' : parseFloat(e.target.value) }
                           })}
-                          className="w-28 text-xs p-1.5 border border-slate-300 rounded text-center focus:ring-emerald-500"
+                          className="w-28 text-xs p-1.5 border border-slate-300 rounded text-center"
                         />
                       </div>
                     </div>
@@ -496,7 +500,7 @@ export default function ArtFeedFormulationApp() {
               <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
                 <h3 className="font-bold text-slate-800 mb-3 flex items-center space-x-2">
                   <Database className="w-4 h-4 text-emerald-600" />
-                  <span>2. Giới hạn Sử dụng Nguyên liệu Tùy chọn (% Mẻ)</span>
+                  <span>2. Giới hạn Nguyên liệu (% Mẻ)</span>
                 </h3>
                 <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
                   {ingredients.map((ing) => (
@@ -549,10 +553,9 @@ export default function ArtFeedFormulationApp() {
               <div className="bg-white p-12 text-center rounded-xl shadow-sm border border-slate-200">
                 <Calculator className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                 <h3 className="text-base font-bold text-slate-700">Chưa có kết quả tính toán</h3>
-                <p className="text-xs text-slate-500 mb-4">Vui lòng bấm nút bên dưới để chạy thuật toán Simplex tìm chi phí thấp nhất</p>
                 <button 
                   onClick={runSimplexOptimization}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold"
+                  className="mt-3 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold"
                 >
                   Chạy Tối Ưu Hóa
                 </button>
@@ -570,20 +573,6 @@ export default function ArtFeedFormulationApp() {
                   <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-slate-500 uppercase font-semibold">Quy mô Mẻ trộn</span>
-                      <div className="flex bg-slate-100 p-0.5 rounded text-xs font-semibold">
-                        <button 
-                          onClick={() => setUnitMode('percent')}
-                          className={`px-2 py-0.5 rounded ${unitMode === 'percent' ? 'bg-white shadow text-slate-800' : 'text-slate-500'}`}
-                        >
-                          Tỷ lệ %
-                        </button>
-                        <button 
-                          onClick={() => setUnitMode('weight')}
-                          className={`px-2 py-0.5 rounded ${unitMode === 'weight' ? 'bg-white shadow text-slate-800' : 'text-slate-500'}`}
-                        >
-                          Khối lượng (kg)
-                        </button>
-                      </div>
                     </div>
                     <div className="flex items-center space-x-2 mt-1">
                       <input 
@@ -601,268 +590,9 @@ export default function ArtFeedFormulationApp() {
                     <div className="text-base font-bold text-slate-800 mt-1 truncate">
                       {optimizationResult.targetName}
                     </div>
-                    <span className="text-[10px] text-slate-400">Thời gian tính: {optimizationResult.timestamp}</span>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-                      <h3 className="font-bold text-slate-800 text-sm">Công thức Khẩu phần Tối ưu Chi phí</h3>
-                      <span className="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-semibold">Simplex LP Solution</span>
-                    </div>
-                    <table className="w-full text-sm text-left">
-                      <thead className="bg-slate-100 text-slate-700 text-xs uppercase font-semibold">
-                        <tr>
-                          <th className="px-4 py-3">Nguyên liệu</th>
-                          <th className="px-4 py-3 text-right">Đơn giá (đ/kg)</th>
-                          <th className="px-4 py-3 text-right">Tỷ lệ %</th>
-                          <th className="px-4 py-3 text-right">Khối lượng (kg)</th>
-                          <th className="px-4 py-3 text-right">Thành tiền (đ/kg KP)</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-200">
-                        {optimizationResult.formula.map((item) => (
-                          <tr key={item.id} className="hover:bg-slate-50">
-                            <td className="px-4 py-3 font-semibold text-slate-900">{item.name}</td>
-                            <td className="px-4 py-3 text-right text-slate-500">{item.price.toLocaleString('vi-VN')}</td>
-                            <td className="px-4 py-3 text-right font-bold text-emerald-700">{item.pct}%</td>
-                            <td className="px-4 py-3 text-right font-medium">{((item.pct * batchWeightKg) / 100).toFixed(1)} kg</td>
-                            <td className="px-4 py-3 text-right font-semibold">{item.costContribution.toLocaleString('vi-VN')} đ</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                    <h3 className="font-bold text-slate-800 text-sm mb-4">Biểu đồ Cơ cấu Nguyên liệu (%)</h3>
-                    <div className="h-64">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={optimizationResult.formula}
-                            dataKey="pct"
-                            nameKey="name"
-                            cx="50%"
-                            cy="50%"
-                            outerRadius={80}
-                            label={({ name, pct }) => `${name.split(' ')[0]}: ${pct}%`}
-                          >
-                            {optimizationResult.formula.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                            ))}
-                          </Pie>
-                          <Tooltip formatter={(value) => `${value}%`} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'shadow' && (
-          <div className="space-y-6">
-            {!optimizationResult ? (
-              <div className="bg-white p-8 text-center rounded-xl border border-slate-200 text-slate-500 text-sm">
-                Vui lòng bấm <strong>Tối ưu hóa</strong> ở bước 4 trước khi xem phân tích Shadow Price.
-              </div>
-            ) : (
-              <>
-                <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-                  <h3 className="font-bold text-slate-800 text-base mb-1 flex items-center space-x-2">
-                    <TrendingUp className="w-5 h-5 text-emerald-600" />
-                    <span>1. Shadow Price Theo Chỉ Tiêu Dinh Dưỡng (Marginal Value)</span>
-                  </h3>
-                  <p className="text-xs text-slate-500 mb-4">
-                    Thể hiện mức chi phí (VNĐ/kg khẩu phần) sẽ tăng lên hoặc giảm đi nếu thay đổi 1 đơn vị dinh dưỡng. 
-                    Nếu trạng thái là <strong>Non-binding (Không ràng buộc)</strong>, Shadow Price = 0 vì chỉ tiêu này đã tự đủ.
-                  </p>
-                  <table className="w-full text-sm text-left">
-                    <thead className="bg-slate-100 text-slate-700 text-xs uppercase font-semibold">
-                      <tr>
-                        <th className="px-4 py-3">Chỉ tiêu Dinh dưỡng</th>
-                        <th className="px-4 py-3 text-right">Đạt được thực tế</th>
-                        <th className="px-4 py-3 text-center">Ràng buộc (Min - Max)</th>
-                        <th className="px-4 py-3 text-center">Trạng thái Ràng buộc</th>
-                        <th className="px-4 py-3 text-right">Shadow Price (VNĐ/đơn vị)</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200">
-                      {optimizationResult.shadowPricesNutrients.map((item) => (
-                        <tr key={item.key} className="hover:bg-slate-50">
-                          <td className="px-4 py-3 font-semibold text-slate-900">{item.name}</td>
-                          <td className="px-4 py-3 text-right font-bold text-slate-800">{item.actual.toFixed(2)}</td>
-                          <td className="px-4 py-3 text-center text-xs text-slate-500">
-                            {item.targetMin ?? 0} - {item.targetMax ?? 'Không giới hạn'}
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                              item.status.includes('Binding') 
-                                ? 'bg-amber-100 text-amber-800 border border-amber-300' 
-                                : 'bg-slate-100 text-slate-600'
-                            }`}>
-                              {item.status}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-right font-mono font-bold text-emerald-700">
-                            {item.shadowPrice > 0 ? `+${item.shadowPrice.toLocaleString('vi-VN')} đ` : '0 đ'}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-                  <h3 className="font-bold text-slate-800 text-base mb-1 flex items-center space-x-2">
-                    <DollarSign className="w-5 h-5 text-amber-600" />
-                    <span>2. Reduced Cost Theo Nguyên Liệu (Shadow Price Nguyên Liệu)</span>
-                  </h3>
-                  <p className="text-xs text-slate-500 mb-4">
-                    Đối với nguyên liệu không được chọn (0%), con số này cho biết giá nguyên liệu đó cần phải giảm bao nhiêu VNĐ/kg thì thuật toán Simplex mới bắt đầu chọn đưa vào phối trộn.
-                  </p>
-                  <table className="w-full text-sm text-left">
-                    <thead className="bg-slate-100 text-slate-700 text-xs uppercase font-semibold">
-                      <tr>
-                        <th className="px-4 py-3">Nguyên liệu</th>
-                        <th className="px-4 py-3 text-right">Tỷ lệ % Chọn</th>
-                        <th className="px-4 py-3 text-right">Giá hiện tại (đ/kg)</th>
-                        <th className="px-4 py-3 text-center">Trạng thái</th>
-                        <th className="px-4 py-3 text-right">Mức giá cần giảm để được dùng (Reduced Cost)</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200">
-                      {optimizationResult.shadowPricesIngredients.map((ing) => (
-                        <tr key={ing.id} className="hover:bg-slate-50">
-                          <td className="px-4 py-3 font-semibold text-slate-900">{ing.name}</td>
-                          <td className="px-4 py-3 text-right font-bold">{ing.pct}%</td>
-                          <td className="px-4 py-3 text-right text-slate-600">{ing.price.toLocaleString('vi-VN')} đ</td>
-                          <td className="px-4 py-3 text-center">
-                            <span className={`px-2 py-0.5 rounded text-xs ${
-                              ing.pct > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
-                            }`}>
-                              {ing.status}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-right font-mono font-bold text-rose-600">
-                            {ing.reducedCost > 0 ? `Cần giảm ${ing.reducedCost.toLocaleString('vi-VN')} đ/kg` : '0 đ (Đã tối ưu)'}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'scenario' && (
-          <div className="space-y-6">
-            <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-              <h3 className="font-bold text-slate-800 text-base mb-2">So sánh Kịch bản Ban đầu vs Kịch bản Sau Điều chỉnh</h3>
-              <p className="text-xs text-slate-500 mb-4">Đối chiếu các chỉ tiêu ưu/nhược điểm giữa 2 lần phối trộn để đưa ra quyết định sản xuất tối ưu.</p>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="border border-slate-200 rounded-xl p-4 bg-slate-50">
-                  <span className="text-xs font-bold uppercase text-slate-500">Kịch bản 1: Ban đầu</span>
-                  {scenarios.baseline ? (
-                    <div className="mt-2 space-y-3">
-                      <div className="text-xl font-black text-slate-800">
-                        {scenarios.baseline.totalCostPerKg.toLocaleString('vi-VN')} đ/kg
-                      </div>
-                      <div className="bg-emerald-50 text-emerald-800 p-2.5 rounded-lg text-xs">
-                        <strong>Ưu điểm:</strong> Chi phí tối thiểu nguyên liệu đạt chuẩn năng lượng.
-                      </div>
-                      <div className="bg-rose-50 text-rose-800 p-2.5 rounded-lg text-xs">
-                        <strong>Nhược điểm:</strong> Sử dụng lượng cám gạo cao có thể ảnh hưởng chất lượng bảo quản.
-                      </div>
-                    </div>
-                  ) : <p className="text-xs text-slate-400 mt-2">Chưa có dữ liệu ban đầu</p>}
-                </div>
-
-                <div className="border border-emerald-300 rounded-xl p-4 bg-emerald-50/30">
-                  <span className="text-xs font-bold uppercase text-emerald-700">Kịch bản 2: Sau điều chỉnh</span>
-                  {scenarios.adjusted ? (
-                    <div className="mt-2 space-y-3">
-                      <div className="text-xl font-black text-emerald-700">
-                        {scenarios.adjusted.totalCostPerKg.toLocaleString('vi-VN')} đ/kg
-                      </div>
-                      <div className="bg-emerald-100 text-emerald-900 p-2.5 rounded-lg text-xs">
-                        <strong>Ưu điểm:</strong> Hàm lượng Acid amin Lysine cân đối hơn, vật nuôi tiêu hóa tốt hơn.
-                      </div>
-                      <div className="bg-amber-50 text-amber-800 p-2.5 rounded-lg text-xs">
-                        <strong>Nhược điểm:</strong> Chi phí tăng thêm khoảng +150 đ/kg so với ban đầu.
-                      </div>
-                    </div>
-                  ) : <p className="text-xs text-slate-400 mt-2">Hãy thay đổi ràng buộc ở bước 3 và chạy lại Tối ưu để tạo kịch bản 2</p>}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </main>
-
-      {/* MODAL THÊM / SỬA NHU CẦU VẬT NUÔI */}
-      {showReqModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-base font-bold text-slate-900">{editingReq ? 'Chỉnh sửa Nhu cầu' : 'Thêm Nhu cầu Vật nuôi Mới'}</h3>
-              <button onClick={() => setShowReqModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
-            </div>
-            <form onSubmit={handleSaveReq} className="space-y-3 text-xs">
-              <div>
-                <label className="font-semibold text-slate-700 block mb-1">Tên đối tượng vật nuôi</label>
-                <input 
-                  type="text" required placeholder="Ví dụ: Heo con cai sữa (7-15kg)"
-                  value={reqForm.name} onChange={e => setReqForm({...reqForm, name: e.target.value})}
-                  className="w-full p-2 border border-slate-300 rounded-lg"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Nhóm vật nuôi</label>
-                  <input 
-                    type="text" value={reqForm.category} onChange={e => setReqForm({...reqForm, category: e.target.value})}
-                    className="w-full p-2 border border-slate-300 rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Năng lượng ME (kcal/kg)</label>
-                  <input 
-                    type="number" value={reqForm.me} onChange={e => setReqForm({...reqForm, me: parseFloat(e.target.value) || 0})}
-                    className="w-full p-2 border border-slate-300 rounded-lg"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <label className="font-semibold text-slate-700 block mb-1">CP (%)</label>
-                  <input type="number" step="0.1" value={reqForm.cp} onChange={e => setReqForm({...reqForm, cp: parseFloat(e.target.value) || 0})} className="w-full p-2 border border-slate-300 rounded-lg" />
-                </div>
-                <div>
-                  <label className="font-semibold text-slate-700 block mb-1">CF (%)</label>
-                  <input type="number" step="0.1" value={reqForm.cf} onChange={e => setReqForm({...reqForm, cf: parseFloat(e.target.value) || 0})} className="w-full p-2 border border-slate-300 rounded-lg" />
-                </div>
-                <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Ca (%)</label>
-                  <input type="number" step="0.01" value={reqForm.ca} onChange={e => setReqForm({...reqForm, ca: parseFloat(e.target.value) || 0})} className="w-full p-2 border border-slate-300 rounded-lg" />
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <label className="font-semibold text-slate-700 block mb-1">P (%)</label>
-                  <input type="number" step="0.01" value={reqForm.p} onChange={e => setReqForm({...reqForm, p: parseFloat(e.target.value) || 0})} className="w-full p-2 border border-slate-300 rounded-lg" />
-                </div>
-                <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Lys (%)</label>
-                  <input type="number" step="0.01" value={reqForm.lys} onChange={e => setReqForm({...reqForm, lys: parseFloat(e.target.value) || 0})} className="w-full p-2 border border-slate-300 rounded-lg" />
-                </div>
-                <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Met (%)</label>
-                  <input type="number" step="0.01" value={reqForm.met} onChange={e => setReqForm({...reqForm, met: parseFloat(e.target.value) || 0})} className="w-full p-2 border border-slate
+                    <div className="p-4 bg-slate-
