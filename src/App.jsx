@@ -4,9 +4,8 @@ import {
   Edit3, ArrowRightLeft, Info, X, FolderPlus, Folder, Upload, 
   Share2, LogIn, LogOut, UserPlus, Weight, CheckSquare, Square, CheckCircle2, AlertCircle, Lock
 } from 'lucide-react';
-import { 
-  ResponsiveContainer, PieChart, Pie, Cell, Tooltip 
-} from 'recharts';
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
+import { createClient } from '@supabase/supabase-js';
 
 const CHART_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
 
@@ -41,16 +40,31 @@ const INITIAL_INGS = [
 export default function ArtFeedFormulationApp() {
   const [activeTab, setActiveTab] = useState('requirements');
   
-  // Auth State (Default: Chưa đăng nhập)
+  // Auth State
   const [currentUser, setCurrentUser] = useState(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState('login');
   const [authForm, setAuthForm] = useState({ username: '', password: '' });
-  
-  // Danh sách tài khoản mặc định (Quyền admin chỉ cấp thủ công ở đây hoặc trên Supabase)
-  const [registeredUsers, setRegisteredUsers] = useState([
-    { username: 'admin', password: '123', name: 'Quản trị viên Hệ thống', role: 'admin' }
-  ]);
+
+  // Supabase Config State
+  const [supabaseConfig, setSupabaseConfig] = useState(() => {
+    const saved = localStorage.getItem('supabase_cfg');
+    return saved ? JSON.parse(saved) : { url: '', key: '', connected: false };
+  });
+  const [showSupaModal, setShowSupaModal] = useState(false);
+
+  // Khởi tạo Supabase Client linh hoạt
+  const supabase = useMemo(() => {
+    if (supabaseConfig.url && supabaseConfig.key) {
+      try {
+        return createClient(supabaseConfig.url, supabaseConfig.key);
+      } catch (err) {
+        console.error("Supabase client error:", err);
+        return null;
+      }
+    }
+    return null;
+  }, [supabaseConfig]);
 
   // Data States
   const [nutrientDefs, setNutrientDefs] = useState(INITIAL_NUTRIENT_DEFS);
@@ -79,9 +93,6 @@ export default function ArtFeedFormulationApp() {
   const [editingIngId, setEditingIngId] = useState(null);
   const [ingForm, setIngForm] = useState({ name: '', price: 10000, minLimit: 0, maxLimit: 100, nutrients: {} });
 
-  const [supabaseConfig, setSupabaseConfig] = useState({ url: '', key: '', connected: false });
-  const [showSupaModal, setShowSupaModal] = useState(false);
-
   const isAdmin = useMemo(() => currentUser && currentUser.role === 'admin', [currentUser]);
 
   useEffect(() => {
@@ -95,8 +106,8 @@ export default function ArtFeedFormulationApp() {
     }
   }, [selectedReqId, selectedReq, nutrientDefs]);
 
-  // Xử lý Đăng ký / Đăng nhập
-  const handleAuthSubmit = (e) => {
+  // ĐĂNG KÝ VÀ ĐĂNG NHẬP TRỰC TIẾP VỚI SUPABASE TABLE EDITOR
+  const handleAuthSubmit = async (e) => {
     e.preventDefault();
     const inputUser = authForm.username.trim();
     const inputPass = authForm.password.trim();
@@ -104,37 +115,94 @@ export default function ArtFeedFormulationApp() {
     if (!inputUser || !inputPass) return;
 
     if (authMode === 'login') {
-      const foundUser = registeredUsers.find(
-        u => u.username === inputUser && (u.password === inputPass || u.password_hash === inputPass)
-      );
+      // 1. Kiểm tra qua Supabase Database nếu đã kết nối
+      if (supabase) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('username', inputUser)
+          .eq('password_hash', inputPass)
+          .maybeSingle();
 
-      if (foundUser) {
-        setCurrentUser(foundUser);
+        if (error) {
+          alert('Lỗi truy vấn dữ liệu từ Supabase: ' + error.message);
+          return;
+        }
+
+        if (data) {
+          // Tự động lấy quyền 'role' trực tiếp từ Table Editor trên Supabase
+          setCurrentUser({
+            id: data.id,
+            username: data.username,
+            name: data.full_name || data.username,
+            role: data.role // Thừa hưởng quyền Admin/User từ Table Editor
+          });
+          setShowAuthModal(false);
+          setAuthForm({ username: '', password: '' });
+          alert(`Đăng nhập thành công! Vai trò: ${data.role === 'admin' ? '⚡ Quản trị viên' : 'Người dùng'}`);
+          return;
+        }
+      }
+
+      // Xử lý tài khoản Admin mặc định offline
+      if (inputUser === 'admin' && inputPass === '123') {
+        setCurrentUser({ id: 'admin_off', username: 'admin', name: 'Quản trị viên Hệ thống', role: 'admin' });
         setShowAuthModal(false);
         setAuthForm({ username: '', password: '' });
-      } else {
-        alert('Tên đăng nhập hoặc mật khẩu không chính xác!');
-      }
-    } else {
-      // Đăng ký tài khoản mới: LUÔN MẶC ĐỊNH VAI TRÒ LÀ 'user' (Không có quyền admin)
-      const exists = registeredUsers.some(u => u.username === inputUser);
-      if (exists) {
-        alert('Tên đăng nhập đã tồn tại!');
         return;
       }
-      const newUser = { 
-        id: `user_${Date.now()}`, 
-        username: inputUser, 
-        password: inputPass, 
-        name: inputUser, 
-        role: 'user' // Ngăn tự cấp quyền admin
-      };
-      setRegisteredUsers([...registeredUsers, newUser]);
-      setCurrentUser(newUser);
-      setShowAuthModal(false);
-      setAuthForm({ username: '', password: '' });
-      alert('Đăng ký tài khoản thành công! Bạn đang sử dụng tài khoản Người dùng.');
+
+      alert('Tài khoản hoặc mật khẩu không chính xác!');
+    } else {
+      // 2. TỰ ĐỘNG THÊM NGUỜI DÙNG ĐĂNG KÝ VÀO TABLE EDITOR TRÊN SUPABASE
+      if (supabase) {
+        // Kiểm tra tồn tại
+        const { data: existing } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('username', inputUser)
+          .maybeSingle();
+
+        if (existing) {
+          alert('Tên đăng nhập đã tồn tại trên CSDL Supabase!');
+          return;
+        }
+
+        // Đẩy dòng mới vào Table Editor (Default role: 'user')
+        const { data: newUser, error: insertError } = await supabase
+          .from('profiles')
+          .insert([
+            { username: inputUser, password_hash: inputPass, full_name: inputUser, role: 'user' }
+          ])
+          .select()
+          .single();
+
+        if (insertError) {
+          alert('Không thể tạo tài khoản trên Supabase: ' + insertError.message);
+          return;
+        }
+
+        setCurrentUser({
+          id: newUser.id,
+          username: newUser.username,
+          name: newUser.full_name || newUser.username,
+          role: 'user'
+        });
+        setShowAuthModal(false);
+        setAuthForm({ username: '', password: '' });
+        alert('Đăng ký tài khoản thành công! Thông tin đã tự động được lưu vào Supabase Table Editor.');
+      } else {
+        alert('Vui lòng kết nối Supabase Cloud trước khi Đăng ký tài khoản để dữ liệu được lưu trữ tự động!');
+      }
     }
+  };
+
+  const handleSaveSupaConfig = () => {
+    const cfg = { ...supabaseConfig, connected: true };
+    setSupabaseConfig(cfg);
+    localStorage.setItem('supabase_cfg', JSON.stringify(cfg));
+    setShowSupaModal(false);
+    alert('Đã kết nối và lưu thông tin Supabase!');
   };
 
   const handleLogout = () => {
@@ -274,7 +342,7 @@ export default function ArtFeedFormulationApp() {
           </div>
 
           <div className="flex items-center space-x-3">
-            {/* CHỈ HIỂN THỊ KẾT NỐI SUPABASE KHI LÀ ADMIN */}
+            {/* CHỈ HỂN THỊ KẾT NỐI SUPABASE KHI LÀ ADMIN */}
             {isAdmin && (
               <button 
                 onClick={() => setShowSupaModal(true)}
@@ -289,7 +357,6 @@ export default function ArtFeedFormulationApp() {
               <div className="flex items-center space-x-3">
                 <div className="text-right text-xs">
                   <span className="block font-bold">{currentUser.name}</span>
-                  {/* CHỈ HIỂN THỊ THẺ QUẢN TRỊ VIÊN KHI LÀ ADMIN */}
                   {isAdmin ? (
                     <span className="text-emerald-200 uppercase text-[10px] font-bold">⚡ Quản trị viên</span>
                   ) : (
@@ -325,7 +392,7 @@ export default function ArtFeedFormulationApp() {
           </div>
           <h2 className="text-xl font-bold text-slate-800 mb-2">Yêu Cầu Đăng Nhập</h2>
           <p className="text-xs text-slate-500 mb-6">
-            Bạn cần đăng nhập hoặc đăng ký tài khoản để truy cập và sử dụng các tính năng phối hợp khẩu phần ArtFeed.
+            Bạn cần đăng nhập để bắt đầu phối hợp khẩu phần và lưu trữ dữ liệu.
           </p>
           <button 
             onClick={() => setShowAuthModal(true)}
@@ -366,7 +433,6 @@ export default function ArtFeedFormulationApp() {
           </div>
 
           <main className="max-w-7xl mx-auto px-4 mt-6">
-            
             {/* TAB 1: VẬT NUÔI */}
             {activeTab === 'requirements' && (
               <div className="space-y-4">
@@ -376,7 +442,6 @@ export default function ArtFeedFormulationApp() {
                     <p className="text-xs text-slate-500">Quản lý tiêu chuẩn dinh dưỡng tối thiểu</p>
                   </div>
                   <div className="flex space-x-2">
-                    {/* CHỈ ADMIN MỚI THẤY NÚT THÊM CHỈ TIÊU DINH DƯỠNG */}
                     {isAdmin && (
                       <button 
                         onClick={() => setShowNutrientModal(true)}
@@ -990,12 +1055,12 @@ export default function ArtFeedFormulationApp() {
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
             <h3 className="text-lg font-bold mb-4">Kết nối Supabase Cloud</h3>
             <div className="space-y-3 text-xs">
-              <input type="text" placeholder="Project URL" value={supabaseConfig.url} onChange={e => setSupabaseConfig({...supabaseConfig, url: e.target.value})} className="w-full p-2 border rounded" />
+              <input type="text" placeholder="Project URL (VD: https://xyz.supabase.co)" value={supabaseConfig.url} onChange={e => setSupabaseConfig({...supabaseConfig, url: e.target.value})} className="w-full p-2 border rounded" />
               <input type="password" placeholder="Anon Key" value={supabaseConfig.key} onChange={e => setSupabaseConfig({...supabaseConfig, key: e.target.value})} className="w-full p-2 border rounded" />
             </div>
             <div className="flex justify-end space-x-2 mt-4">
               <button onClick={() => setShowSupaModal(false)} className="px-4 py-2 text-slate-600">Hủy</button>
-              <button onClick={() => { setSupabaseConfig({...supabaseConfig, connected: true}); setShowSupaModal(false); }} className="px-4 py-2 bg-emerald-600 text-white rounded">Lưu</button>
+              <button onClick={handleSaveSupaConfig} className="px-4 py-2 bg-emerald-600 text-white rounded font-bold">Lưu & Kết Nối</button>
             </div>
           </div>
         </div>
