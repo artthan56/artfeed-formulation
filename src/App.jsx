@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Database, Scale, Calculator, TrendingUp, Cpu, Sliders, Play, Plus, Trash2, 
   Edit3, Check, RefreshCw, BarChart2, DollarSign, Layers, ArrowRightLeft, 
-  HelpCircle, Settings, ShieldCheck, AlertCircle, Info, FileSpreadsheet
+  HelpCircle, Settings, ShieldCheck, AlertCircle, Info, FileSpreadsheet, X
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell 
@@ -48,6 +48,15 @@ export default function ArtFeedFormulationApp() {
   const [supabaseConfig, setSupabaseConfig] = useState({ url: '', key: '', connected: false });
   const [showSupaModal, setShowSupaModal] = useState(false);
 
+  // --- MODAL NHẬP ĐỒNG BỘ NGUYÊN LIỆU VÀ NHU CẦU ---
+  const [showReqModal, setShowReqModal] = useState(false);
+  const [editingReq, setEditingReq] = useState(null);
+  const [reqForm, setReqForm] = useState({ name: '', category: 'Heo', me: 3000, cp: 16, cf: 5, ca: 0.7, p: 0.5, lys: 0.8, met: 0.3 });
+
+  const [showIngModal, setShowIngModal] = useState(false);
+  const [editingIng, setEditingIng] = useState(null);
+  const [ingForm, setIngForm] = useState({ name: '', price: 10000, me: 3000, cp: 10, cf: 3, ca: 0.1, p: 0.2, lys: 0.3, met: 0.1, minLimit: 0, maxLimit: 100 });
+
   useEffect(() => {
     if (selectedReq) {
       setBatchConstraints({
@@ -60,7 +69,7 @@ export default function ArtFeedFormulationApp() {
         met: { min: selectedReq.met, max: selectedReq.met * 1.2 }
       });
     }
-  }, [selectedReqId]);
+  }, [selectedReqId, selectedReq]);
 
   useEffect(() => {
     const limits = {};
@@ -69,6 +78,54 @@ export default function ArtFeedFormulationApp() {
     });
     setIngredientLimits(limits);
   }, [ingredients]);
+
+  // Xử lý Thêm / Sửa / Xóa Nhu cầu Vật nuôi
+  const handleSaveReq = (e) => {
+    e.preventDefault();
+    if (!reqForm.name) return;
+    if (editingReq) {
+      setRequirements(requirements.map(r => r.id === editingReq.id ? { ...reqForm, id: editingReq.id } : r));
+    } else {
+      const newReq = { ...reqForm, id: `req_${Date.now()}` };
+      setRequirements([...requirements, newReq]);
+      setSelectedReqId(newReq.id);
+    }
+    setShowReqModal(false);
+    setEditingReq(null);
+  };
+
+  const handleDeleteReq = (id, e) => {
+    e.stopPropagation();
+    if (requirements.length <= 1) {
+      alert('Phải giữ lại ít nhất 1 nhu cầu vật nuôi!');
+      return;
+    }
+    const filtered = requirements.filter(r => r.id !== id);
+    setRequirements(filtered);
+    if (selectedReqId === id) setSelectedReqId(filtered[0].id);
+  };
+
+  // Xử lý Thêm / Sửa / Xóa Nguyên liệu
+  const handleSaveIng = (e) => {
+    e.preventDefault();
+    if (!ingForm.name) return;
+    if (editingIng) {
+      setIngredients(ingredients.map(i => i.id === editingIng.id ? { ...ingForm, id: editingIng.id } : i));
+    } else {
+      const newIng = { ...ingForm, id: `ing_${Date.now()}` };
+      setIngredients([...ingredients, newIng]);
+    }
+    setShowIngModal(false);
+    setEditingIng(null);
+  };
+
+  const handleDeleteIng = (id) => {
+    if (ingredients.length <= 2) {
+      alert('Phải giữ lại ít nhất 2 nguyên liệu để phối trộn!');
+      return;
+    }
+    setIngredients(ingredients.filter(i => i.id !== id));
+  };
 
   const runSimplexOptimization = () => {
     let totalCost = 0;
@@ -227,7 +284,14 @@ export default function ArtFeedFormulationApp() {
                 <h2 className="text-lg font-bold text-slate-800">Cơ sở dữ liệu Nhu cầu Dinh dưỡng Vật nuôi</h2>
                 <p className="text-xs text-slate-500">Quản lý các tiêu chuẩn dinh dưỡng tối thiểu cho từng đối tượng vật nuôi</p>
               </div>
-              <button className="flex items-center space-x-1 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-xs font-semibold">
+              <button 
+                onClick={() => {
+                  setEditingReq(null);
+                  setReqForm({ name: '', category: 'Heo', me: 3000, cp: 16, cf: 5, ca: 0.7, p: 0.5, lys: 0.8, met: 0.3 });
+                  setShowReqModal(true);
+                }}
+                className="flex items-center space-x-1 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-xs font-semibold"
+              >
                 <Plus className="w-4 h-4" /> <span>Thêm nhu cầu mới</span>
               </button>
             </div>
@@ -247,6 +311,7 @@ export default function ArtFeedFormulationApp() {
                       <th className="px-4 py-3 text-right">P (%)</th>
                       <th className="px-4 py-3 text-right">Lys (%)</th>
                       <th className="px-4 py-3 text-right">Met (%)</th>
+                      <th className="px-4 py-3 text-center">Thao tác</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
@@ -274,6 +339,27 @@ export default function ArtFeedFormulationApp() {
                         <td className="px-4 py-3 text-right">{req.p}</td>
                         <td className="px-4 py-3 text-right">{req.lys}</td>
                         <td className="px-4 py-3 text-right">{req.met}</td>
+                        <td className="px-4 py-3 text-center">
+                          <div className="flex items-center justify-center space-x-2">
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingReq(req);
+                                setReqForm({ ...req });
+                                setShowReqModal(true);
+                              }}
+                              className="text-blue-600 hover:text-blue-800 p-1"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
+                            <button 
+                              onClick={(e) => handleDeleteReq(req.id, e)}
+                              className="text-rose-600 hover:text-rose-800 p-1"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -290,7 +376,14 @@ export default function ArtFeedFormulationApp() {
                 <h2 className="text-lg font-bold text-slate-800">Cơ sở dữ liệu Giá trị Dinh dưỡng & Giá thành Nguyên liệu</h2>
                 <p className="text-xs text-slate-500">Cập nhật đơn giá (đ/kg) và thành phần dinh dưỡng chi tiết</p>
               </div>
-              <button className="flex items-center space-x-1 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-xs font-semibold">
+              <button 
+                onClick={() => {
+                  setEditingIng(null);
+                  setIngForm({ name: '', price: 10000, me: 3000, cp: 10, cf: 3, ca: 0.1, p: 0.2, lys: 0.3, met: 0.1, minLimit: 0, maxLimit: 100 });
+                  setShowIngModal(true);
+                }}
+                className="flex items-center space-x-1 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-xs font-semibold"
+              >
                 <Plus className="w-4 h-4" /> <span>Thêm nguyên liệu mới</span>
               </button>
             </div>
@@ -309,6 +402,7 @@ export default function ArtFeedFormulationApp() {
                       <th className="px-4 py-3 text-right">P (%)</th>
                       <th className="px-4 py-3 text-right">Lys (%)</th>
                       <th className="px-4 py-3 text-right">Met (%)</th>
+                      <th className="px-4 py-3 text-center">Thao tác</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
@@ -323,6 +417,26 @@ export default function ArtFeedFormulationApp() {
                         <td className="px-4 py-3 text-right">{ing.p}</td>
                         <td className="px-4 py-3 text-right">{ing.lys}</td>
                         <td className="px-4 py-3 text-right">{ing.met}</td>
+                        <td className="px-4 py-3 text-center">
+                          <div className="flex items-center justify-center space-x-2">
+                            <button 
+                              onClick={() => {
+                                setEditingIng(ing);
+                                setIngForm({ ...ing });
+                                setShowIngModal(true);
+                              }}
+                              className="text-blue-600 hover:text-blue-800 p-1"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteIng(ing.id)}
+                              className="text-rose-600 hover:text-rose-800 p-1"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -693,58 +807,62 @@ export default function ArtFeedFormulationApp() {
         )}
       </main>
 
-      {showSupaModal && (
+      {/* MODAL THÊM / SỬA NHU CẦU VẬT NUÔI */}
+      {showReqModal && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
-            <h3 className="text-lg font-bold text-slate-900 mb-1 flex items-center space-x-2">
-              <Database className="w-5 h-5 text-emerald-600" />
-              <span>Kết nối Cơ sở Dữ liệu Supabase</span>
-            </h3>
-            <p className="text-xs text-slate-500 mb-4">Nhập URL và API Key dự án Supabase để đồng bộ dữ liệu đám mây</p>
-            
-            <div className="space-y-3 text-xs">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-base font-bold text-slate-900">{editingReq ? 'Chỉnh sửa Nhu cầu' : 'Thêm Nhu cầu Vật nuôi Mới'}</h3>
+              <button onClick={() => setShowReqModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+            </div>
+            <form onSubmit={handleSaveReq} className="space-y-3 text-xs">
               <div>
-                <label className="font-semibold text-slate-700 block mb-1">Project URL</label>
+                <label className="font-semibold text-slate-700 block mb-1">Tên đối tượng vật nuôi</label>
                 <input 
-                  type="text" 
-                  placeholder="https://xxxx.supabase.co"
-                  value={supabaseConfig.url}
-                  onChange={(e) => setSupabaseConfig({ ...supabaseConfig, url: e.target.value })}
+                  type="text" required placeholder="Ví dụ: Heo con cai sữa (7-15kg)"
+                  value={reqForm.name} onChange={e => setReqForm({...reqForm, name: e.target.value})}
                   className="w-full p-2 border border-slate-300 rounded-lg"
                 />
               </div>
-              <div>
-                <label className="font-semibold text-slate-700 block mb-1">Anon Public Key</label>
-                <input 
-                  type="password" 
-                  placeholder="eyJhbGciOiJIUzI1NiIsInR..."
-                  value={supabaseConfig.key}
-                  onChange={(e) => setSupabaseConfig({ ...supabaseConfig, key: e.target.value })}
-                  className="w-full p-2 border border-slate-300 rounded-lg"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">Nhóm vật nuôi</label>
+                  <input 
+                    type="text" value={reqForm.category} onChange={e => setReqForm({...reqForm, category: e.target.value})}
+                    className="w-full p-2 border border-slate-300 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">Năng lượng ME (kcal/kg)</label>
+                  <input 
+                    type="number" value={reqForm.me} onChange={e => setReqForm({...reqForm, me: parseFloat(e.target.value) || 0})}
+                    className="w-full p-2 border border-slate-300 rounded-lg"
+                  />
+                </div>
               </div>
-            </div>
-
-            <div className="flex justify-end space-x-2 mt-6">
-              <button 
-                onClick={() => setShowSupaModal(false)}
-                className="px-4 py-2 rounded-lg text-xs text-slate-600 hover:bg-slate-100 font-semibold"
-              >
-                Hủy
-              </button>
-              <button 
-                onClick={() => {
-                  setSupabaseConfig({ ...supabaseConfig, connected: true });
-                  setShowSupaModal(false);
-                }}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold"
-              >
-                Lưu kết nối
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">CP (%)</label>
+                  <input type="number" step="0.1" value={reqForm.cp} onChange={e => setReqForm({...reqForm, cp: parseFloat(e.target.value) || 0})} className="w-full p-2 border border-slate-300 rounded-lg" />
+                </div>
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">CF (%)</label>
+                  <input type="number" step="0.1" value={reqForm.cf} onChange={e => setReqForm({...reqForm, cf: parseFloat(e.target.value) || 0})} className="w-full p-2 border border-slate-300 rounded-lg" />
+                </div>
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">Ca (%)</label>
+                  <input type="number" step="0.01" value={reqForm.ca} onChange={e => setReqForm({...reqForm, ca: parseFloat(e.target.value) || 0})} className="w-full p-2 border border-slate-300 rounded-lg" />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">P (%)</label>
+                  <input type="number" step="0.01" value={reqForm.p} onChange={e => setReqForm({...reqForm, p: parseFloat(e.target.value) || 0})} className="w-full p-2 border border-slate-300 rounded-lg" />
+                </div>
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">Lys (%)</label>
+                  <input type="number" step="0.01" value={reqForm.lys} onChange={e => setReqForm({...reqForm, lys: parseFloat(e.target.value) || 0})} className="w-full p-2 border border-slate-300 rounded-lg" />
+                </div>
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">Met (%)</label>
+                  <input type="number" step="0.01" value={reqForm.met} onChange={e => setReqForm({...reqForm, met: parseFloat(e.target.value) || 0})} className="w-full p-2 border border-slate
