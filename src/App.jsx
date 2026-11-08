@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Database, Scale, Calculator, TrendingUp, Sliders, Play, Plus, Trash2, 
   Edit3, ArrowRightLeft, Info, X, FolderPlus, Folder, Upload, 
-  Share2, LogIn, LogOut, UserPlus
+  Share2, LogIn, LogOut, UserPlus, Weight
 } from 'lucide-react';
 import { 
   ResponsiveContainer, PieChart, Pie, Cell, Tooltip 
@@ -44,7 +44,7 @@ export default function ArtFeedFormulationApp() {
   // Auth State
   const [currentUser, setCurrentUser] = useState({ id: 'admin', name: 'Quản trị viên', role: 'admin' });
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authMode, setAuthMode] = useState('login'); // 'login' hoặc 'register'
+  const [authMode, setAuthMode] = useState('login');
   const [authForm, setAuthForm] = useState({ username: '', password: '' });
   const [registeredUsers, setRegisteredUsers] = useState([
     { username: 'admin', password: '123', name: 'Quản trị viên', role: 'admin' }
@@ -60,6 +60,8 @@ export default function ArtFeedFormulationApp() {
   
   const [batchConstraints, setBatchConstraints] = useState({});
   const [ingredientLimits, setIngredientLimits] = useState({});
+  
+  // --- QUẢN LÝ KHỐI LƯỢNG MẺ TRỘN (ĐIỀU CHỈNH ĐƯỢC) ---
   const [batchWeightKg, setBatchWeightKg] = useState(1000);
 
   const [optimizationResult, setOptimizationResult] = useState(null);
@@ -183,19 +185,16 @@ export default function ArtFeedFormulationApp() {
     tempFormula = tempFormula.map(i => ({
       ...i,
       pct: Number(((i.pct / currentSum) * 100).toFixed(2)),
-      weightKg: Number((((i.pct / currentSum) * 100 * batchWeightKg) / 100).toFixed(2)),
       costContribution: Number((((i.pct / currentSum) * i.price)).toFixed(2))
     }));
 
     totalCost = tempFormula.reduce((sum, item) => sum + item.costContribution, 0);
 
-    // Tính dinh dưỡng khẩu phần thực tế
     const actualNutrients = {};
     nutrientDefs.forEach(n => {
       actualNutrients[n.id] = tempFormula.reduce((s, i) => s + ((i.nutrients[n.id] || 0) * i.pct) / 100, 0);
     });
 
-    // Shadow Price & Reduced Cost
     const shadowPricesNutrients = nutrientDefs.map(n => ({
       key: n.id,
       name: n.name,
@@ -220,7 +219,6 @@ export default function ArtFeedFormulationApp() {
       timestamp: new Date().toLocaleString('vi-VN'),
       targetName: selectedReq ? selectedReq.name : 'Vật nuôi',
       totalCostPerKg: Math.round(totalCost),
-      totalCostBatch: Math.round(totalCost * batchWeightKg),
       formula: tempFormula,
       actualNutrients,
       shadowPricesNutrients,
@@ -266,7 +264,7 @@ export default function ArtFeedFormulationApp() {
         </div>
       </header>
 
-      {/* THANH MENU ĐỔI TÊN ĐÚNG YÊU CẦU */}
+      {/* THANH MENU */}
       <div className="bg-white border-b border-slate-200 sticky top-14 z-30 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 flex space-x-1 overflow-x-auto">
           {[
@@ -483,7 +481,7 @@ export default function ArtFeedFormulationApp() {
           </div>
         )}
 
-        {/* TAB 4: PHKP (PHỐI HỢP KHẨU PHẦN) + BIỂU ĐỒ TRÒN */}
+        {/* TAB 4: PHKP - TÍNH NĂNG TÙY CHỈNH KHỐI LƯỢNG MẺ TRỘN THÊM MỚI TẠI ĐÂY */}
         {activeTab === 'optimize' && (
           <div className="space-y-6">
             {!optimizationResult ? (
@@ -494,47 +492,91 @@ export default function ArtFeedFormulationApp() {
               </div>
             ) : (
               <>
-                <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex justify-between items-center">
-                  <div>
-                    <span className="text-xs text-slate-500 uppercase font-semibold">Giá thành Khẩu phần Tối ưu</span>
-                    <div className="text-2xl font-black text-emerald-600">{optimizationResult.totalCostPerKg.toLocaleString('vi-VN')} đ/kg</div>
+                {/* ĐẦU MỤC THÔNG TIN & ĐIỀU CHỈNH MẺ TRỘN */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* GIÁ THÀNH ĐƠN VỊ */}
+                  <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                    <span className="text-xs text-slate-500 uppercase font-semibold">Giá thành Khẩu phần</span>
+                    <div className="text-2xl font-black text-emerald-600 mt-1">
+                      {optimizationResult.totalCostPerKg.toLocaleString('vi-VN')} <span className="text-xs font-normal text-slate-500">VNĐ/kg</span>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <select value={selectedFolderId} onChange={e => setSelectedFolderId(e.target.value)} className="p-2 border rounded-lg text-xs font-semibold">
-                      {folders.map(f => <option key={f.id} value={f.id}>📁 {f.name}</option>)}
-                    </select>
-                    <button onClick={() => alert('Đã lưu công thức vào thư mục thành công!')} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-xs font-bold">
-                      💾 Lưu vào Thư mục
-                    </button>
+
+                  {/* KHU VỰC TÙY CHỈNH KHỐI LƯỢNG MẺ TRỘN (KG) */}
+                  <div className="bg-white p-4 rounded-xl shadow-sm border border-amber-200 bg-amber-50/30">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-amber-800 uppercase font-bold flex items-center space-x-1">
+                        <Weight className="w-3.5 h-3.5 text-amber-600" />
+                        <span>Khối lượng mẻ trộn</span>
+                      </span>
+                      <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-semibold">Tùy chỉnh</span>
+                    </div>
+                    <div className="flex items-center space-x-2 mt-2">
+                      <input 
+                        type="number" 
+                        min="1"
+                        value={batchWeightKg} 
+                        onChange={(e) => setBatchWeightKg(Math.max(1, parseFloat(e.target.value) || 0))}
+                        className="w-28 text-lg font-black p-1.5 border border-amber-300 rounded-lg text-amber-900 bg-white focus:ring-amber-500"
+                      />
+                      <span className="text-xs text-slate-600 font-semibold">
+                        kg/mẻ <br />
+                        <span className="text-amber-700 font-bold">
+                          = {(optimizationResult.totalCostPerKg * batchWeightKg).toLocaleString('vi-VN')} đ
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* THỦ TỤC LƯU VÀO THƯ MỤC */}
+                  <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                    <span className="text-xs text-slate-500 uppercase font-semibold">Lưu trữ công thức</span>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <select value={selectedFolderId} onChange={e => setSelectedFolderId(e.target.value)} className="p-2 border rounded-lg text-xs font-semibold flex-1">
+                        {folders.map(f => <option key={f.id} value={f.id}>📁 {f.name}</option>)}
+                      </select>
+                      <button onClick={() => alert('Đã lưu công thức vào thư mục thành công!')} className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-xs font-bold whitespace-nowrap">
+                        💾 Lưu
+                      </button>
+                    </div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* BẢNG CÔNG THỨC KHẨU PHẦN */}
+                  {/* BẢNG CÔNG THỨC KHẨU PHẦN TỰ ĐỘNG TÍNH THEO KG MẺ TRỘN */}
                   <div className="lg:col-span-2 bg-white rounded-xl shadow border overflow-hidden">
+                    <div className="p-3 bg-slate-100 border-b border-slate-200 flex justify-between items-center">
+                      <h3 className="font-bold text-sm text-slate-800">Bảng Phối Hợp Nguyên Liệu (Mẻ {batchWeightKg.toLocaleString('vi-VN')} kg)</h3>
+                      <span className="text-xs text-emerald-700 font-bold">Tổng chi phí: {(optimizationResult.totalCostPerKg * batchWeightKg).toLocaleString('vi-VN')} đ</span>
+                    </div>
                     <table className="w-full text-sm text-left">
-                      <thead className="bg-slate-100 text-slate-700 text-xs uppercase font-semibold">
+                      <thead className="bg-slate-50 text-slate-700 text-xs uppercase font-semibold">
                         <tr>
                           <th className="px-4 py-3">Nguyên liệu</th>
                           <th className="px-4 py-3 text-right">Đơn giá (đ/kg)</th>
                           <th className="px-4 py-3 text-right">Tỷ lệ %</th>
-                          <th className="px-4 py-3 text-right">Khối lượng (kg)</th>
+                          <th className="px-4 py-3 text-right font-bold text-emerald-700">Khối lượng mẻ ({batchWeightKg}kg)</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200">
-                        {optimizationResult.formula.map((item) => (
-                          <tr key={item.id}>
-                            <td className="px-4 py-3 font-semibold">{item.name}</td>
-                            <td className="px-4 py-3 text-right">{item.price.toLocaleString('vi-VN')}</td>
-                            <td className="px-4 py-3 text-right font-bold text-emerald-700">{item.pct}%</td>
-                            <td className="px-4 py-3 text-right">{((item.pct * batchWeightKg) / 100).toFixed(1)} kg</td>
-                          </tr>
-                        ))}
+                        {optimizationResult.formula.map((item) => {
+                          const itemKg = (item.pct * batchWeightKg) / 100;
+                          return (
+                            <tr key={item.id} className="hover:bg-slate-50">
+                              <td className="px-4 py-3 font-semibold">{item.name}</td>
+                              <td className="px-4 py-3 text-right">{item.price.toLocaleString('vi-VN')} đ</td>
+                              <td className="px-4 py-3 text-right font-bold text-emerald-700">{item.pct}%</td>
+                              <td className="px-4 py-3 text-right font-black text-slate-900 bg-amber-50/40">
+                                {itemKg.toFixed(2)} kg
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
 
-                  {/* BIỂU ĐỒ KHẨU PHẦN KHÔI PHỤC */}
+                  {/* BIỂU ĐỒ CƠ CẤU NGUYÊN LIỆU */}
                   <div className="bg-white p-4 rounded-xl shadow border">
                     <h3 className="font-bold text-sm mb-4">Biểu đồ Cơ cấu Nguyên liệu (%)</h3>
                     <div className="h-64">
@@ -564,7 +606,7 @@ export default function ArtFeedFormulationApp() {
           </div>
         )}
 
-        {/* TAB 5: SHADOW PRICE KHÔI PHỤC HOÀN CHỈNH */}
+        {/* TAB 5: SHADOW PRICE */}
         {activeTab === 'shadow' && (
           <div className="space-y-6">
             {!optimizationResult ? (
@@ -685,7 +727,7 @@ export default function ArtFeedFormulationApp() {
         </div>
       )}
 
-      {/* MODAL THÊM / SỬA NHU CẦU VẬT NUÔI (SỬA LỖI ĐỘNG) */}
+      {/* MODAL THÊM / SỬA NHU CẦU VẬT NUÔI */}
       {showReqModal && (
         <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
@@ -761,7 +803,7 @@ export default function ArtFeedFormulationApp() {
         </div>
       )}
 
-      {/* MODAL ĐĂNG NHẬP / ĐĂNG KÝ TÙY CHỌN */}
+      {/* MODAL ĐĂNG NHẬP / ĐĂNG KÝ */}
       {showAuthModal && (
         <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl">
