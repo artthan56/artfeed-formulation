@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Database, Scale, Calculator, TrendingUp, Sliders, Play, Plus, Trash2, 
   Edit3, ArrowRightLeft, Info, X, FolderPlus, Folder, Upload, 
-  Share2, LogIn, LogOut, UserPlus, Weight
+  Share2, LogIn, LogOut, UserPlus, Weight, CheckSquare, Square
 } from 'lucide-react';
 import { 
   ResponsiveContainer, PieChart, Pie, Cell, Tooltip 
@@ -32,10 +32,10 @@ const INITIAL_REQS = [
 ];
 
 const INITIAL_INGS = [
-  { id: 'ing_1', name: 'Ngô hạt (Bắp)', price: 6800, minLimit: 0, maxLimit: 65, isPublic: true, userId: 'admin', nutrients: { me: 3400, cp: 8.5, cf: 2.2, ca: 0.03, p: 0.28, lys: 0.24, met: 0.18 } },
-  { id: 'ing_2', name: 'Cám gạo mịn', price: 5500, minLimit: 0, maxLimit: 25, isPublic: true, userId: 'admin', nutrients: { me: 2700, cp: 12.0, cf: 8.5, ca: 0.08, p: 1.35, lys: 0.54, met: 0.22 } },
-  { id: 'ing_3', name: 'Khô dầu đậu nành', price: 13500, minLimit: 0, maxLimit: 30, isPublic: true, userId: 'admin', nutrients: { me: 2450, cp: 44.0, cf: 6.0, ca: 0.30, p: 0.65, lys: 2.80, met: 0.62 } },
-  { id: 'ing_4', name: 'Bột cá (60% CP)', price: 28000, minLimit: 0, maxLimit: 8, isPublic: true, userId: 'admin', nutrients: { me: 2900, cp: 60.0, cf: 1.0, ca: 4.50, p: 2.80, lys: 4.50, met: 1.60 } }
+  { id: 'ing_1', selected: true, name: 'Ngô hạt (Bắp)', price: 6800, minLimit: 0, maxLimit: 65, isPublic: true, userId: 'admin', nutrients: { me: 3400, cp: 8.5, cf: 2.2, ca: 0.03, p: 0.28, lys: 0.24, met: 0.18 } },
+  { id: 'ing_2', selected: true, name: 'Cám gạo mịn', price: 5500, minLimit: 0, maxLimit: 25, isPublic: true, userId: 'admin', nutrients: { me: 2700, cp: 12.0, cf: 8.5, ca: 0.08, p: 1.35, lys: 0.54, met: 0.22 } },
+  { id: 'ing_3', selected: true, name: 'Khô dầu đậu nành', price: 13500, minLimit: 0, maxLimit: 30, isPublic: true, userId: 'admin', nutrients: { me: 2450, cp: 44.0, cf: 6.0, ca: 0.30, p: 0.65, lys: 2.80, met: 0.62 } },
+  { id: 'ing_4', selected: true, name: 'Bột cá (60% CP)', price: 28000, minLimit: 0, maxLimit: 8, isPublic: true, userId: 'admin', nutrients: { me: 2900, cp: 60.0, cf: 1.0, ca: 4.50, p: 2.80, lys: 4.50, met: 1.60 } }
 ];
 
 export default function ArtFeedFormulationApp() {
@@ -59,9 +59,6 @@ export default function ArtFeedFormulationApp() {
   const selectedReq = useMemo(() => requirements.find(r => r.id === selectedReqId) || requirements[0], [requirements, selectedReqId]);
   
   const [batchConstraints, setBatchConstraints] = useState({});
-  const [ingredientLimits, setIngredientLimits] = useState({});
-  
-  // --- QUẢN LÝ KHỐI LƯỢNG MẺ TRỘN (ĐIỀU CHỈNH ĐƯỢC) ---
   const [batchWeightKg, setBatchWeightKg] = useState(1000);
 
   const [optimizationResult, setOptimizationResult] = useState(null);
@@ -124,6 +121,16 @@ export default function ArtFeedFormulationApp() {
     }
   };
 
+  // Bật / Tắt chọn nguyên liệu
+  const toggleSelectIngredient = (id) => {
+    setIngredients(prev => prev.map(i => i.id === id ? { ...i, selected: !i.selected } : i));
+  };
+
+  // Chọn tất cả hoặc bỏ chọn tất cả nguyên liệu
+  const toggleSelectAllIngredients = (selectAll) => {
+    setIngredients(prev => prev.map(i => ({ ...i, selected: selectAll })));
+  };
+
   // Thêm Chỉ tiêu Dinh dưỡng
   const handleAddNutrientDef = (e) => {
     e.preventDefault();
@@ -165,16 +172,23 @@ export default function ArtFeedFormulationApp() {
     if (editingIngId) {
       setIngredients(prev => prev.map(i => i.id === editingIngId ? { ...ingForm, id: editingIngId } : i));
     } else {
-      setIngredients(prev => [...prev, { ...ingForm, id: `ing_${Date.now()}`, userId: currentUser.id, isPublic: currentUser.role === 'admin' }]);
+      setIngredients(prev => [...prev, { ...ingForm, selected: true, id: `ing_${Date.now()}`, userId: currentUser.id, isPublic: currentUser.role === 'admin' }]);
     }
     setShowIngModal(false);
     setEditingIngId(null);
   };
 
-  // Chạy Phối hợp Khẩu phần (PHKP) & Tính Shadow Price
+  // Chạy Phối hợp Khẩu phần (LỌC CHỈ LẤY NGUYÊN LIỆU ĐƯỢC TICK CHỌN)
   const runSimplexOptimization = () => {
+    const activeIngredients = ingredients.filter(i => i.selected);
+    
+    if (activeIngredients.length === 0) {
+      alert('Vui lòng tích chọn ít nhất 1 nguyên liệu ở tab 2. NGUYÊN LIỆU để tiến hành phối trộn!');
+      return;
+    }
+
     let totalCost = 0;
-    const sorted = [...ingredients].sort((a, b) => (a.price / ((a.nutrients.cp || 0) + 1)) - (b.price / ((b.nutrients.cp || 0) + 1)));
+    const sorted = [...activeIngredients].sort((a, b) => (a.price / ((a.nutrients.cp || 0) + 1)) - (b.price / ((b.nutrients.cp || 0) + 1)));
     
     let tempFormula = sorted.map((ing, idx) => {
       let pct = idx === 0 ? 55 : idx === 1 ? 25 : idx === 2 ? 18 : 2;
@@ -203,7 +217,7 @@ export default function ArtFeedFormulationApp() {
       shadowPrice: Math.round((actualNutrients[n.id] || 1) * 15)
     }));
 
-    const shadowPricesIngredients = ingredients.map(ing => {
+    const shadowPricesIngredients = activeIngredients.map(ing => {
       const used = tempFormula.find(f => f.id === ing.id);
       const pct = used ? used.pct : 0;
       return {
@@ -227,6 +241,8 @@ export default function ArtFeedFormulationApp() {
 
     setOptimizationResult(result);
   };
+
+  const allIngsSelected = useMemo(() => ingredients.every(i => i.selected), [ingredients]);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans pb-12">
@@ -376,13 +392,13 @@ export default function ArtFeedFormulationApp() {
           </div>
         )}
 
-        {/* TAB 2: NGUYÊN LIỆU */}
+        {/* TAB 2: NGUYÊN LIỆU - ĐÃ THÊM CỘT TICK CHỌN DÙNG TRONG CÔNG THỨC */}
         {activeTab === 'ingredients' && (
           <div className="space-y-4">
             <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200">
               <div>
                 <h2 className="text-lg font-bold">Cơ sở dữ liệu Nguyên liệu & Giá thành</h2>
-                <p className="text-xs text-slate-500">Cập nhật đơn giá và dinh dưỡng</p>
+                <p className="text-xs text-slate-500">Đánh dấu chọn các nguyên liệu cho phép tham gia mẻ phối hợp khẩu phần</p>
               </div>
               <div className="flex space-x-2">
                 <button 
@@ -403,6 +419,15 @@ export default function ArtFeedFormulationApp() {
                 <table className="w-full text-sm text-left">
                   <thead className="bg-slate-100 text-slate-700 text-xs uppercase font-semibold">
                     <tr>
+                      {/* CỘT CHECKBOX LỰA CHỌN NGUYÊN LIỆU */}
+                      <th className="px-4 py-3 text-center w-16">
+                        <input 
+                          type="checkbox" 
+                          checked={allIngsSelected} 
+                          onChange={(e) => toggleSelectAllIngredients(e.target.checked)} 
+                          className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                        />
+                      </th>
                       <th className="px-4 py-3">Tên Nguyên Liệu</th>
                       <th className="px-4 py-3 text-right">Giá (VNĐ/kg)</th>
                       {nutrientDefs.map(n => (
@@ -413,8 +438,20 @@ export default function ArtFeedFormulationApp() {
                   </thead>
                   <tbody className="divide-y divide-slate-200">
                     {ingredients.map((ing) => (
-                      <tr key={ing.id} className="hover:bg-slate-50">
-                        <td className="px-4 py-3 font-semibold">{ing.name}</td>
+                      <tr key={ing.id} className={`hover:bg-slate-50 ${ing.selected ? 'bg-emerald-50/20' : 'bg-slate-50/50 text-slate-400'}`}>
+                        <td className="px-4 py-3 text-center">
+                          <input 
+                            type="checkbox" 
+                            checked={!!ing.selected} 
+                            onChange={() => toggleSelectIngredient(ing.id)} 
+                            className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                          />
+                        </td>
+                        <td className="px-4 py-3 font-semibold">
+                          <span className={ing.selected ? 'text-slate-900' : 'line-through text-slate-400'}>
+                            {ing.name}
+                          </span>
+                        </td>
                         <td className="px-4 py-3 text-right font-bold text-amber-700">{ing.price.toLocaleString('vi-VN')} đ</td>
                         {nutrientDefs.map(n => (
                           <td key={n.id} className="px-4 py-3 text-right font-mono">{ing.nutrients[n.id] ?? 0}</td>
@@ -481,7 +518,7 @@ export default function ArtFeedFormulationApp() {
           </div>
         )}
 
-        {/* TAB 4: PHKP - TÍNH NĂNG TÙY CHỈNH KHỐI LƯỢNG MẺ TRỘN THÊM MỚI TẠI ĐÂY */}
+        {/* TAB 4: PHKP */}
         {activeTab === 'optimize' && (
           <div className="space-y-6">
             {!optimizationResult ? (
@@ -492,9 +529,7 @@ export default function ArtFeedFormulationApp() {
               </div>
             ) : (
               <>
-                {/* ĐẦU MỤC THÔNG TIN & ĐIỀU CHỈNH MẺ TRỘN */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* GIÁ THÀNH ĐƠN VỊ */}
                   <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
                     <span className="text-xs text-slate-500 uppercase font-semibold">Giá thành Khẩu phần</span>
                     <div className="text-2xl font-black text-emerald-600 mt-1">
@@ -502,7 +537,6 @@ export default function ArtFeedFormulationApp() {
                     </div>
                   </div>
 
-                  {/* KHU VỰC TÙY CHỈNH KHỐI LƯỢNG MẺ TRỘN (KG) */}
                   <div className="bg-white p-4 rounded-xl shadow-sm border border-amber-200 bg-amber-50/30">
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-amber-800 uppercase font-bold flex items-center space-x-1">
@@ -528,7 +562,6 @@ export default function ArtFeedFormulationApp() {
                     </div>
                   </div>
 
-                  {/* THỦ TỤC LƯU VÀO THƯ MỤC */}
                   <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
                     <span className="text-xs text-slate-500 uppercase font-semibold">Lưu trữ công thức</span>
                     <div className="flex items-center space-x-2 mt-1">
@@ -543,7 +576,6 @@ export default function ArtFeedFormulationApp() {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* BẢNG CÔNG THỨC KHẨU PHẦN TỰ ĐỘNG TÍNH THEO KG MẺ TRỘN */}
                   <div className="lg:col-span-2 bg-white rounded-xl shadow border overflow-hidden">
                     <div className="p-3 bg-slate-100 border-b border-slate-200 flex justify-between items-center">
                       <h3 className="font-bold text-sm text-slate-800">Bảng Phối Hợp Nguyên Liệu (Mẻ {batchWeightKg.toLocaleString('vi-VN')} kg)</h3>
@@ -576,7 +608,6 @@ export default function ArtFeedFormulationApp() {
                     </table>
                   </div>
 
-                  {/* BIỂU ĐỒ CƠ CẤU NGUYÊN LIỆU */}
                   <div className="bg-white p-4 rounded-xl shadow border">
                     <h3 className="font-bold text-sm mb-4">Biểu đồ Cơ cấu Nguyên liệu (%)</h3>
                     <div className="h-64">
@@ -643,7 +674,7 @@ export default function ArtFeedFormulationApp() {
                 </div>
 
                 <div className="bg-white p-5 rounded-xl shadow border">
-                  <h3 className="font-bold mb-1 text-slate-800">2. Reduced Cost Theo Nguyên Liệu</h3>
+                  <h3 className="font-bold mb-1 text-slate-800">2. Reduced Cost Theo Nguyên Liệu (Chỉ xét nguyên liệu được tick chọn)</h3>
                   <p className="text-xs text-slate-500 mb-3">Mức giá nguyên liệu cần giảm (VNĐ/kg) để được thuật toán chọn phối trộn.</p>
                   <table className="w-full text-sm text-left">
                     <thead className="bg-slate-100 text-xs uppercase font-semibold">
@@ -704,7 +735,7 @@ export default function ArtFeedFormulationApp() {
 
       </main>
 
-      {/* MODAL THÊM CHỈ TIÊU DINH DƯỠNG */}
+      {/* MODALS */}
       {showNutrientModal && (
         <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl">
@@ -727,7 +758,6 @@ export default function ArtFeedFormulationApp() {
         </div>
       )}
 
-      {/* MODAL THÊM / SỬA NHU CẦU VẬT NUÔI */}
       {showReqModal && (
         <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
@@ -763,7 +793,6 @@ export default function ArtFeedFormulationApp() {
         </div>
       )}
 
-      {/* MODAL THÊM / SỬA NGUYÊN LIỆU */}
       {showIngModal && (
         <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
@@ -803,7 +832,6 @@ export default function ArtFeedFormulationApp() {
         </div>
       )}
 
-      {/* MODAL ĐĂNG NHẬP / ĐĂNG KÝ */}
       {showAuthModal && (
         <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl">
@@ -838,7 +866,6 @@ export default function ArtFeedFormulationApp() {
         </div>
       )}
 
-      {/* MODAL KẾT NỐI SUPABASE */}
       {showSupaModal && (
         <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
