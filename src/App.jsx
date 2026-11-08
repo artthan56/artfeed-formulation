@@ -224,13 +224,13 @@ export default function ArtFeedFormulationApp() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center space-x-2 px-4 py-3 border-b-2 font-medium text-sm whitespace-nowrap transition ${
+                className={`flex items-center space-x-2 px-4 py-3 border-b-2 font-medium text-sm whitespace-nowrap transition {
                   isActive 
                     ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50' 
                     : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-emerald-600' : 'text-slate-400'}`} />
+                <Icon className={`w-4 h-4 {isActive ? 'text-emerald-600' : 'text-slate-400'}`} />
                 <span>{tab.label}</span>
               </button>
             );
@@ -275,7 +275,7 @@ export default function ArtFeedFormulationApp() {
                     {requirements.map((req) => (
                       <tr 
                         key={req.id} 
-                        className={`hover:bg-slate-50 cursor-pointer ${selectedReqId === req.id ? 'bg-emerald-50/60 font-medium' : ''}`}
+                        className={`hover:bg-slate-50 cursor-pointer {selectedReqId === req.id ? 'bg-emerald-50/60 font-medium' : ''}`}
                         onClick={() => setSelectedReqId(req.id)}
                       >
                         <td className="px-4 py-3">
@@ -487,13 +487,13 @@ export default function ArtFeedFormulationApp() {
                       <div className="flex bg-slate-100 p-0.5 rounded text-xs font-semibold">
                         <button 
                           onClick={() => setUnitMode('percent')}
-                          className={`px-2 py-0.5 rounded ${unitMode === 'percent' ? 'bg-white shadow text-slate-800' : 'text-slate-500'}`}
+                          className={`px-2 py-0.5 rounded {unitMode === 'percent' ? 'bg-white shadow text-slate-800' : 'text-slate-500'}`}
                         >
                           Tỷ lệ %
                         </button>
                         <button 
                           onClick={() => setUnitMode('weight')}
-                          className={`px-2 py-0.5 rounded ${unitMode === 'weight' ? 'bg-white shadow text-slate-800' : 'text-slate-500'}`}
+                          className={`px-2 py-0.5 rounded {unitMode === 'weight' ? 'bg-white shadow text-slate-800' : 'text-slate-500'}`}
                         >
                           Khối lượng (kg)
                         </button>
@@ -506,7 +506,7 @@ export default function ArtFeedFormulationApp() {
                         onChange={(e) => setBatchWeightKg(parseFloat(e.target.value) || 0)}
                         className="w-24 text-base font-bold p-1 border rounded"
                       />
-                      <span className="text-xs text-slate-500">kg/mẻ $\rightarrow$ <strong>{optimizationResult.totalCostBatch.toLocaleString('vi-VN')} đ</strong></span>
+                      <span className="text-xs text-slate-500">kg/mẻ -> <strong>{optimizationResult.totalCostBatch.toLocaleString('vi-VN')} đ</strong></span>
                     </div>
                   </div>
 
@@ -563,13 +563,13 @@ export default function ArtFeedFormulationApp() {
                             cx="50%"
                             cy="50%"
                             outerRadius={80}
-                            label={({ name, pct }) => `${name.split(' ')[0]}: ${pct}%`}
+                            label={({ name, pct }) => `{name.split(' ')[0]}: {pct}%`}
                           >
                             {optimizationResult.formula.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                              <Cell key={`cell-{index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                             ))}
                           </Pie>
-                          <Tooltip formatter={(value) => `${value}%`} />
+                          <Tooltip formatter={(value) => `{value}%`} />
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
@@ -595,7 +595,7 @@ export default function ArtFeedFormulationApp() {
                     <span>1. Shadow Price Theo Chỉ Tiêu Dinh Dưỡng (Marginal Value)</span>
                   </h3>
                   <p className="text-xs text-slate-500 mb-4">
-                    Thể hiện mức chi phí (VNĐ/kg khẩu phần) sẽ **tăng lên hoặc giảm đi** nếu thay đổi 1 đơn vị dinh dưỡng. 
+                    Thể hiện mức chi phí (VNĐ/kg khẩu phần) sẽ tăng lên hoặc giảm đi nếu thay đổi 1 đơn vị dinh dưỡng. 
                     Nếu trạng thái là <strong>Non-binding (Không ràng buộc)</strong>, Shadow Price = 0 vì chỉ tiêu này đã tự đủ.
                   </p>
                   <table className="w-full text-sm text-left">
@@ -617,7 +617,7 @@ export default function ArtFeedFormulationApp() {
                             {item.targetMin ?? 0} - {item.targetMax ?? 'Không giới hạn'}
                           </td>
                           <td className="px-4 py-3 text-center">
-                            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold {
                               item.status.includes('Binding') 
                                 ? 'bg-amber-100 text-amber-800 border border-amber-300' 
                                 : 'bg-slate-100 text-slate-600'
@@ -626,7 +626,7 @@ export default function ArtFeedFormulationApp() {
                             </span>
                           </td>
                           <td className="px-4 py-3 text-right font-mono font-bold text-emerald-700">
-                            {item.shadowPrice > 0 ? `+${item.shadowPrice.toLocaleString('vi-VN')} đ` : '0 đ'}
+                            {item.shadowPrice > 0 ? `+{item.shadowPrice.toLocaleString('vi-VN')} đ` : '0 đ'}
                           </td>
                         </tr>
                       ))}
@@ -640,7 +640,7 @@ export default function ArtFeedFormulationApp() {
                     <span>2. Reduced Cost Theo Nguyên Liệu (Shadow Price Nguyên Liệu)</span>
                   </h3>
                   <p className="text-xs text-slate-500 mb-4">
-                    Đối với nguyên liệu **không được chọn (0%)**, con số này cho biết giá nguyên liệu đó **cần phải giảm bao nhiêu VNĐ/kg** thì thuật toán Simplex mới bắt đầu chọn đưa vào phối trộn.
+                    Đối với nguyên liệu không được chọn (0%), con số này cho biết giá nguyên liệu đó cần phải giảm bao nhiêu VNĐ/kg thì thuật toán Simplex mới bắt đầu chọn đưa vào phối trộn.
                   </p>
                   <table className="w-full text-sm text-left">
                     <thead className="bg-slate-100 text-slate-700 text-xs uppercase font-semibold">
@@ -659,14 +659,14 @@ export default function ArtFeedFormulationApp() {
                           <td className="px-4 py-3 text-right font-bold">{ing.pct}%</td>
                           <td className="px-4 py-3 text-right text-slate-600">{ing.price.toLocaleString('vi-VN')} đ</td>
                           <td className="px-4 py-3 text-center">
-                            <span className={`px-2 py-0.5 rounded text-xs ${
+                            <span className={`px-2 py-0.5 rounded text-xs {
                               ing.pct > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
                             }`}>
                               {ing.status}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-right font-mono font-bold text-rose-600">
-                            {ing.reducedCost > 0 ? `Cần giảm ${ing.reducedCost.toLocaleString('vi-VN')} đ/kg` : '0 đ (Đã tối ưu)'}
+                            {ing.reducedCost > 0 ? `Cần giảm {ing.reducedCost.toLocaleString('vi-VN')} đ/kg` : '0 đ (Đã tối ưu)'}
                           </td>
                         </tr>
                       ))}
