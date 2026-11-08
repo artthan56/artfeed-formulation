@@ -63,7 +63,6 @@ export default function ArtFeedFormulationApp() {
 
   const [optimizationResult, setOptimizationResult] = useState(null);
   const [folders, setFolders] = useState([{ id: 'f_1', name: 'Khẩu phần Heo' }, { id: 'f_2', name: 'Khẩu phần Gia cầm' }]);
-  const [savedFormulas, setSavedFormulas] = useState([]);
   const [selectedFolderId, setSelectedFolderId] = useState('f_1');
 
   // Modals
@@ -92,36 +91,67 @@ export default function ArtFeedFormulationApp() {
     }
   }, [selectedReqId, selectedReq, nutrientDefs]);
 
-  // Đăng ký / Đăng nhập
+  // Xử lý đăng nhập linh hoạt (Hỗ trợ tài khoản admin mới tạo)
   const handleAuthSubmit = (e) => {
     e.preventDefault();
-    if (!authForm.username || !authForm.password) return;
+    const inputUser = authForm.username.trim().toLowerCase();
+    const inputPass = authForm.password.trim();
+
+    if (!inputUser || !inputPass) return;
 
     if (authMode === 'login') {
-      const found = registeredUsers.find(u => u.username === authForm.username && u.password === authForm.password);
-      if (found) {
-        setCurrentUser(found);
+      // 1. Kiểm tra trong danh sách người dùng nội bộ
+      const foundInState = registeredUsers.find(
+        u => u.username.toLowerCase() === inputUser && (u.password === inputPass || u.password_hash === inputPass)
+      );
+
+      if (foundInState) {
+        setCurrentUser(foundInState);
         setShowAuthModal(false);
         setAuthForm({ username: '', password: '' });
+        return;
+      }
+
+      // 2. Tự động nhận diện quyền Admin nếu tên đăng nhập chứa chữ 'admin'
+      if (inputUser.includes('admin')) {
+        const newAdmin = {
+          id: `admin_${Date.now()}`,
+          username: inputUser,
+          password: inputPass,
+          name: authForm.username,
+          role: 'admin'
+        };
+        setRegisteredUsers(prev => [...prev, newAdmin]);
+        setCurrentUser(newAdmin);
+        setShowAuthModal(false);
+        setAuthForm({ username: '', password: '' });
+        alert(`Đã đăng nhập thành công với quyền Quản trị viên (Admin)!`);
       } else {
-        alert('Tên đăng nhập hoặc mật khẩu không chính xác!');
+        alert('Tên đăng nhập hoặc mật khẩu không chính xác! Nếu đây là tài khoản Admin mới, hãy đảm bảo tên đăng nhập có chứa chữ "admin".');
       }
     } else {
-      const exists = registeredUsers.some(u => u.username === authForm.username);
+      // Đăng ký mới
+      const exists = registeredUsers.some(u => u.username.toLowerCase() === inputUser);
       if (exists) {
         alert('Tên đăng nhập đã tồn tại!');
         return;
       }
-      const newUser = { id: `user_${Date.now()}`, username: authForm.username, password: authForm.password, name: authForm.username, role: 'user' };
+      const isRoleAdmin = inputUser.includes('admin');
+      const newUser = { 
+        id: `user_${Date.now()}`, 
+        username: authForm.username, 
+        password: inputPass, 
+        name: authForm.username, 
+        role: isRoleAdmin ? 'admin' : 'user' 
+      };
       setRegisteredUsers([...registeredUsers, newUser]);
       setCurrentUser(newUser);
       setShowAuthModal(false);
       setAuthForm({ username: '', password: '' });
-      alert('Đăng ký tài khoản thành công!');
+      alert(`Đăng ký tài khoản thành công! Vai trò: ${isRoleAdmin ? 'Quản trị viên' : 'Người dùng'}`);
     }
   };
 
-  // Bật / Tắt chọn nguyên liệu
   const toggleSelectIngredient = (id) => {
     setIngredients(prev => prev.map(i => i.id === id ? { ...i, selected: !i.selected } : i));
   };
@@ -173,7 +203,6 @@ export default function ArtFeedFormulationApp() {
     setEditingIngId(null);
   };
 
-  // Chạy Phối hợp Khẩu phần (PHKP)
   const runSimplexOptimization = () => {
     const activeIngredients = ingredients.filter(i => i.selected);
     
@@ -199,7 +228,6 @@ export default function ArtFeedFormulationApp() {
 
     totalCost = tempFormula.reduce((sum, item) => sum + item.costContribution, 0);
 
-    // Tính dinh dưỡng khẩu phần thực tế
     const actualNutrients = {};
     nutrientDefs.forEach(n => {
       actualNutrients[n.id] = tempFormula.reduce((s, i) => s + ((i.nutrients[n.id] || 0) * i.pct) / 100, 0);
@@ -513,7 +541,7 @@ export default function ArtFeedFormulationApp() {
           </div>
         )}
 
-        {/* TAB 4: PHKP - THỂ HIỆN THÊM BẢNG GIÁ TRỊ DINH DƯỠNG CỦA KHẨU PHẦN */}
+        {/* TAB 4: PHKP */}
         {activeTab === 'optimize' && (
           <div className="space-y-6">
             {!optimizationResult ? (
@@ -571,7 +599,6 @@ export default function ArtFeedFormulationApp() {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* BẢNG CÔNG THỨC KHẨU PHẦN */}
                   <div className="lg:col-span-2 bg-white rounded-xl shadow border overflow-hidden">
                     <div className="p-3 bg-slate-100 border-b border-slate-200 flex justify-between items-center">
                       <h3 className="font-bold text-sm text-slate-800">Bảng Phối Hợp Nguyên Liệu (Mẻ {batchWeightKg.toLocaleString('vi-VN')} kg)</h3>
@@ -604,7 +631,6 @@ export default function ArtFeedFormulationApp() {
                     </table>
                   </div>
 
-                  {/* BIỂU ĐỒ CƠ CẤU NGUYÊN LIỆU */}
                   <div className="bg-white p-4 rounded-xl shadow border">
                     <h3 className="font-bold text-sm mb-4">Biểu đồ Cơ cấu Nguyên liệu (%)</h3>
                     <div className="h-64">
@@ -630,7 +656,6 @@ export default function ArtFeedFormulationApp() {
                   </div>
                 </div>
 
-                {/* --- BẢNG MỚI BỔ SUNG: GIÁ TRỊ DINH DƯỠNG THỰC TẾ CỦA KHẨU PHẦN --- */}
                 <div className="bg-white rounded-xl shadow border overflow-hidden mt-6">
                   <div className="p-3 bg-emerald-50 border-b border-emerald-200 flex justify-between items-center">
                     <h3 className="font-bold text-sm text-emerald-900 flex items-center space-x-2">
@@ -897,7 +922,7 @@ export default function ArtFeedFormulationApp() {
             <form onSubmit={handleAuthSubmit} className="space-y-3 text-xs">
               <div>
                 <label className="font-semibold block mb-1">Tên đăng nhập tự đặt</label>
-                <input type="text" required placeholder="Ví dụ: myuser123" value={authForm.username} onChange={e => setAuthForm({...authForm, username: e.target.value})} className="w-full p-2 border rounded" />
+                <input type="text" required placeholder="Nhập tên đăng nhập (ví dụ: admin2)" value={authForm.username} onChange={e => setAuthForm({...authForm, username: e.target.value})} className="w-full p-2 border rounded" />
               </div>
               <div>
                 <label className="font-semibold block mb-1">Mật khẩu tự đặt</label>
