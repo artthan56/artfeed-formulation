@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Database, Scale, Calculator, TrendingUp, Sliders, Play, Plus, Trash2, 
   Edit3, ArrowRightLeft, Info, X, FolderPlus, Folder, Upload, 
-  Share2, LogIn, LogOut, UserPlus, Weight, CheckSquare, Square
+  Share2, LogIn, LogOut, UserPlus, Weight, CheckSquare, Square, CheckCircle2, AlertCircle
 } from 'lucide-react';
 import { 
   ResponsiveContainer, PieChart, Pie, Cell, Tooltip 
@@ -126,12 +126,10 @@ export default function ArtFeedFormulationApp() {
     setIngredients(prev => prev.map(i => i.id === id ? { ...i, selected: !i.selected } : i));
   };
 
-  // Chọn tất cả hoặc bỏ chọn tất cả nguyên liệu
   const toggleSelectAllIngredients = (selectAll) => {
     setIngredients(prev => prev.map(i => ({ ...i, selected: selectAll })));
   };
 
-  // Thêm Chỉ tiêu Dinh dưỡng
   const handleAddNutrientDef = (e) => {
     e.preventDefault();
     if (!newNutrient.name) return;
@@ -141,7 +139,6 @@ export default function ArtFeedFormulationApp() {
     setNewNutrient({ name: '', unit: '%' });
   };
 
-  // Xóa Chỉ tiêu Dinh dưỡng
   const handleDeleteNutrientDef = (id) => {
     if (nutrientDefs.length <= 1) {
       alert('Cần giữ lại ít nhất 1 chỉ tiêu dinh dưỡng!');
@@ -150,7 +147,6 @@ export default function ArtFeedFormulationApp() {
     setNutrientDefs(nutrientDefs.filter(n => n.id !== id));
   };
 
-  // Thêm / Sửa Nhu cầu Vật nuôi
   const handleSaveReq = (e) => {
     e.preventDefault();
     if (!reqForm.name) return;
@@ -165,7 +161,6 @@ export default function ArtFeedFormulationApp() {
     setEditingReqId(null);
   };
 
-  // Thêm / Sửa Nguyên liệu
   const handleSaveIng = (e) => {
     e.preventDefault();
     if (!ingForm.name) return;
@@ -178,12 +173,12 @@ export default function ArtFeedFormulationApp() {
     setEditingIngId(null);
   };
 
-  // Chạy Phối hợp Khẩu phần (LỌC CHỈ LẤY NGUYÊN LIỆU ĐƯỢC TICK CHỌN)
+  // Chạy Phối hợp Khẩu phần (PHKP)
   const runSimplexOptimization = () => {
     const activeIngredients = ingredients.filter(i => i.selected);
     
     if (activeIngredients.length === 0) {
-      alert('Vui lòng tích chọn ít nhất 1 nguyên liệu ở tab 2. NGUYÊN LIỆU để tiến hành phối trộn!');
+      alert('Vui lòng tích chọn ít nhất 1 nguyên liệu ở tab 2. NGUYÊN LIỆU!');
       return;
     }
 
@@ -204,6 +199,7 @@ export default function ArtFeedFormulationApp() {
 
     totalCost = tempFormula.reduce((sum, item) => sum + item.costContribution, 0);
 
+    // Tính dinh dưỡng khẩu phần thực tế
     const actualNutrients = {};
     nutrientDefs.forEach(n => {
       actualNutrients[n.id] = tempFormula.reduce((s, i) => s + ((i.nutrients[n.id] || 0) * i.pct) / 100, 0);
@@ -392,7 +388,7 @@ export default function ArtFeedFormulationApp() {
           </div>
         )}
 
-        {/* TAB 2: NGUYÊN LIỆU - ĐÃ THÊM CỘT TICK CHỌN DÙNG TRONG CÔNG THỨC */}
+        {/* TAB 2: NGUYÊN LIỆU */}
         {activeTab === 'ingredients' && (
           <div className="space-y-4">
             <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200">
@@ -419,7 +415,6 @@ export default function ArtFeedFormulationApp() {
                 <table className="w-full text-sm text-left">
                   <thead className="bg-slate-100 text-slate-700 text-xs uppercase font-semibold">
                     <tr>
-                      {/* CỘT CHECKBOX LỰA CHỌN NGUYÊN LIỆU */}
                       <th className="px-4 py-3 text-center w-16">
                         <input 
                           type="checkbox" 
@@ -518,7 +513,7 @@ export default function ArtFeedFormulationApp() {
           </div>
         )}
 
-        {/* TAB 4: PHKP */}
+        {/* TAB 4: PHKP - THỂ HIỆN THÊM BẢNG GIÁ TRỊ DINH DƯỠNG CỦA KHẨU PHẦN */}
         {activeTab === 'optimize' && (
           <div className="space-y-6">
             {!optimizationResult ? (
@@ -576,6 +571,7 @@ export default function ArtFeedFormulationApp() {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* BẢNG CÔNG THỨC KHẨU PHẦN */}
                   <div className="lg:col-span-2 bg-white rounded-xl shadow border overflow-hidden">
                     <div className="p-3 bg-slate-100 border-b border-slate-200 flex justify-between items-center">
                       <h3 className="font-bold text-sm text-slate-800">Bảng Phối Hợp Nguyên Liệu (Mẻ {batchWeightKg.toLocaleString('vi-VN')} kg)</h3>
@@ -608,6 +604,7 @@ export default function ArtFeedFormulationApp() {
                     </table>
                   </div>
 
+                  {/* BIỂU ĐỒ CƠ CẤU NGUYÊN LIỆU */}
                   <div className="bg-white p-4 rounded-xl shadow border">
                     <h3 className="font-bold text-sm mb-4">Biểu đồ Cơ cấu Nguyên liệu (%)</h3>
                     <div className="h-64">
@@ -632,6 +629,64 @@ export default function ArtFeedFormulationApp() {
                     </div>
                   </div>
                 </div>
+
+                {/* --- BẢNG MỚI BỔ SUNG: GIÁ TRỊ DINH DƯỠNG THỰC TẾ CỦA KHẨU PHẦN --- */}
+                <div className="bg-white rounded-xl shadow border overflow-hidden mt-6">
+                  <div className="p-3 bg-emerald-50 border-b border-emerald-200 flex justify-between items-center">
+                    <h3 className="font-bold text-sm text-emerald-900 flex items-center space-x-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <span>Giá Trị Dinh Dưỡng Đạt Được Của Khẩu Phần (Tính trên 1kg Thức Ăn)</span>
+                    </h3>
+                    <span className="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-semibold">
+                      Áp dụng cho: {selectedReq?.name}
+                    </span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                      <thead className="bg-slate-100 text-slate-700 text-xs uppercase font-semibold">
+                        <tr>
+                          <th className="px-4 py-3">Chỉ tiêu Dinh dưỡng</th>
+                          <th className="px-4 py-3 text-right">Đơn vị tính</th>
+                          <th className="px-4 py-3 text-right font-bold text-slate-600">Nhu cầu Tối thiểu (Yêu cầu)</th>
+                          <th className="px-4 py-3 text-right font-black text-emerald-700 bg-emerald-50/50">Thực tế đạt được</th>
+                          <th className="px-4 py-3 text-center">Trạng thái Đạt chuẩn</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200">
+                        {nutrientDefs.map((n) => {
+                          const reqValue = selectedReq?.nutrients[n.id] || 0;
+                          const actualValue = optimizationResult.actualNutrients[n.id] || 0;
+                          const isPassed = actualValue >= reqValue;
+
+                          return (
+                            <tr key={n.id} className="hover:bg-slate-50">
+                              <td className="px-4 py-3 font-semibold text-slate-900">{n.name}</td>
+                              <td className="px-4 py-3 text-right text-xs text-slate-500">{n.unit}</td>
+                              <td className="px-4 py-3 text-right font-medium text-slate-600">{reqValue}</td>
+                              <td className="px-4 py-3 text-right font-bold text-emerald-700 bg-emerald-50/30">
+                                {actualValue.toFixed(2)}
+                              </td>
+                              <td className="px-4 py-3 text-center">
+                                {isPassed ? (
+                                  <span className="inline-flex items-center space-x-1 bg-emerald-100 text-emerald-800 text-xs px-2.5 py-0.5 rounded-full font-semibold">
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                    <span>Đạt chuẩn</span>
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center space-x-1 bg-rose-100 text-rose-800 text-xs px-2.5 py-0.5 rounded-full font-semibold">
+                                    <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
+                                    <span>Thiếu hụt</span>
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
               </>
             )}
           </div>
