@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Database, Scale, Calculator, TrendingUp, Sliders, Play, Plus, Trash2, 
-  Edit3, ArrowRightLeft, Info, X
+  Edit3, ArrowRightLeft, Info, X, FolderPlus, Folder, FileText, Upload, 
+  Share2, Lock, UserCheck, LogIn, LogOut, ShieldAlert
 } from 'lucide-react';
 import { 
   ResponsiveContainer, PieChart, Pie, Cell, Tooltip 
@@ -9,74 +10,100 @@ import {
 
 const CHART_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
 
-const INITIAL_NUTRIENT_REQS = [
-  { id: 'req_1', name: 'Heo thịt (20-50kg)', category: 'Heo', me: 3150, cp: 16.0, cf: 4.5, ca: 0.65, p: 0.55, lys: 0.95, met: 0.30 },
-  { id: 'req_2', name: 'Gà thịt giai đoạn 2 (21-42 ngày)', category: 'Gia cầm', me: 3100, cp: 19.0, cf: 4.0, ca: 0.90, p: 0.65, lys: 1.10, met: 0.45 },
-  { id: 'req_3', name: 'Bò thịt vỗ béo', category: 'Gia súc lớn', me: 2600, cp: 13.0, cf: 12.0, ca: 0.50, p: 0.35, lys: 0.60, met: 0.20 }
+const INITIAL_NUTRIENT_DEFS = [
+  { id: 'me', name: 'Năng lượng (ME)', unit: 'kcal/kg' },
+  { id: 'cp', name: 'Protein thô (CP)', unit: '%' },
+  { id: 'cf', name: 'Xơ thô (CF)', unit: '%' },
+  { id: 'ca', name: 'Canxi (Ca)', unit: '%' },
+  { id: 'p', name: 'Phốt pho (P)', unit: '%' },
+  { id: 'lys', name: 'Lysine', unit: '%' },
+  { id: 'met', name: 'Methionine', unit: '%' }
 ];
 
-const INITIAL_INGREDIENTS = [
-  { id: 'ing_1', name: 'Ngô hạt (Bắp)', price: 6800, me: 3400, cp: 8.5, cf: 2.2, ca: 0.03, p: 0.28, lys: 0.24, met: 0.18, minLimit: 0, maxLimit: 65 },
-  { id: 'ing_2', name: 'Cám gạo mịn', price: 5500, me: 2700, cp: 12.0, cf: 8.5, ca: 0.08, p: 1.35, lys: 0.54, met: 0.22, minLimit: 0, maxLimit: 25 },
-  { id: 'ing_3', name: 'Khô dầu đậu nành (44% CP)', price: 13500, me: 2450, cp: 44.0, cf: 6.0, ca: 0.30, p: 0.65, lys: 2.80, met: 0.62, minLimit: 0, maxLimit: 30 },
-  { id: 'ing_4', name: 'Bột cá (60% CP)', price: 28000, me: 2900, cp: 60.0, cf: 1.0, ca: 4.50, p: 2.80, lys: 4.50, met: 1.60, minLimit: 0, maxLimit: 8 },
-  { id: 'ing_5', name: 'Dầu đậu nành', price: 29000, me: 8800, cp: 0.0, cf: 0.0, ca: 0.00, p: 0.00, lys: 0.00, met: 0.00, minLimit: 0, maxLimit: 3 },
-  { id: 'ing_6', name: 'Dicalcium Phosphate (DCP)', price: 18500, me: 0, cp: 0.0, cf: 0.0, ca: 23.00, p: 18.00, lys: 0.00, met: 0.00, minLimit: 0, maxLimit: 2 },
-  { id: 'ing_7', name: 'Đá vôi (Vôi bột)', price: 1500, me: 0, cp: 0.0, cf: 0.0, ca: 37.00, p: 0.00, lys: 0.00, met: 0.00, minLimit: 0, maxLimit: 1.5 },
-  { id: 'ing_8', name: 'L-Lysine HCl', price: 45000, me: 0, cp: 0.0, cf: 0.0, ca: 0.00, p: 0.00, lys: 78.00, met: 0.00, minLimit: 0, maxLimit: 0.8 },
-  { id: 'ing_9', name: 'DL-Methionine', price: 68000, me: 0, cp: 0.0, cf: 0.0, ca: 0.00, p: 0.00, lys: 0.00, met: 99.00, minLimit: 0, maxLimit: 0.5 }
+const INITIAL_REQS = [
+  { 
+    id: 'req_1', name: 'Heo thịt (20-50kg)', category: 'Heo', isPublic: true, userId: 'admin',
+    nutrients: { me: 3150, cp: 16.0, cf: 4.5, ca: 0.65, p: 0.55, lys: 0.95, met: 0.30 } 
+  },
+  { 
+    id: 'req_2', name: 'Gà thịt giai đoạn 2', category: 'Gia cầm', isPublic: true, userId: 'admin',
+    nutrients: { me: 3100, cp: 19.0, cf: 4.0, ca: 0.90, p: 0.65, lys: 1.10, met: 0.45 } 
+  }
+];
+
+const INITIAL_INGS = [
+  { id: 'ing_1', name: 'Ngô hạt (Bắp)', price: 6800, minLimit: 0, maxLimit: 65, isPublic: true, userId: 'admin', nutrients: { me: 3400, cp: 8.5, cf: 2.2, ca: 0.03, p: 0.28, lys: 0.24, met: 0.18 } },
+  { id: 'ing_2', name: 'Cám gạo mịn', price: 5500, minLimit: 0, maxLimit: 25, isPublic: true, userId: 'admin', nutrients: { me: 2700, cp: 12.0, cf: 8.5, ca: 0.08, p: 1.35, lys: 0.54, met: 0.22 } },
+  { id: 'ing_3', name: 'Khô dầu đậu nành', price: 13500, minLimit: 0, maxLimit: 30, isPublic: true, userId: 'admin', nutrients: { me: 2450, cp: 44.0, cf: 6.0, ca: 0.30, p: 0.65, lys: 2.80, met: 0.62 } },
+  { id: 'ing_4', name: 'Bột cá (60% CP)', price: 28000, minLimit: 0, maxLimit: 8, isPublic: true, userId: 'admin', nutrients: { me: 2900, cp: 60.0, cf: 1.0, ca: 4.50, p: 2.80, lys: 4.50, met: 1.60 } }
 ];
 
 export default function ArtFeedFormulationApp() {
   const [activeTab, setActiveTab] = useState('requirements');
-  const [requirements, setRequirements] = useState(INITIAL_NUTRIENT_REQS);
-  const [ingredients, setIngredients] = useState(INITIAL_INGREDIENTS);
   
-  const [selectedReqId, setSelectedReqId] = useState('req_1');
-  const selectedReq = useMemo(() => {
-    return requirements.find(r => r.id === selectedReqId) || requirements[0] || INITIAL_NUTRIENT_REQS[0];
-  }, [requirements, selectedReqId]);
+  const [currentUser, setCurrentUser] = useState({ id: 'user_guest', name: 'Khách hàng', role: 'user' });
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authForm, setAuthForm] = useState({ email: '', password: '', role: 'user' });
 
+  const [nutrientDefs, setNutrientDefs] = useState(INITIAL_NUTRIENT_DEFS);
+  const [requirements, setRequirements] = useState(INITIAL_REQS);
+  const [ingredients, setIngredients] = useState(INITIAL_INGS);
+
+  const [selectedReqId, setSelectedReqId] = useState('req_1');
+  const selectedReq = useMemo(() => requirements.find(r => r.id === selectedReqId) || requirements[0], [requirements, selectedReqId]);
+  
   const [batchConstraints, setBatchConstraints] = useState({});
   const [ingredientLimits, setIngredientLimits] = useState({});
   const [batchWeightKg, setBatchWeightKg] = useState(1000);
 
   const [optimizationResult, setOptimizationResult] = useState(null);
-  const [scenarios, setScenarios] = useState({ baseline: null, adjusted: null });
-  
-  const [supabaseConfig, setSupabaseConfig] = useState({ url: '', key: '', connected: false });
-  const [showSupaModal, setShowSupaModal] = useState(false);
+  const [folders, setFolders] = useState([{ id: 'f_1', name: 'Khẩu phần Heo' }, { id: 'f_2', name: 'Khẩu phần Gia cầm' }]);
+  const [savedFormulas, setSavedFormulas] = useState([]);
+  const [selectedFolderId, setSelectedFolderId] = useState('f_1');
 
-  // Modal State
+  const [showNutrientModal, setShowNutrientModal] = useState(false);
+  const [newNutrient, setNewNutrient] = useState({ name: '', unit: '%' });
+
   const [showReqModal, setShowReqModal] = useState(false);
   const [editingReqId, setEditingReqId] = useState(null);
-  const [reqForm, setReqForm] = useState({ name: '', category: 'Heo', me: 3000, cp: 16, cf: 5, ca: 0.7, p: 0.5, lys: 0.8, met: 0.3 });
+  const [reqForm, setReqForm] = useState({ name: '', category: 'Heo', nutrients: {} });
 
   const [showIngModal, setShowIngModal] = useState(false);
   const [editingIngId, setEditingIngId] = useState(null);
-  const [ingForm, setIngForm] = useState({ name: '', price: 10000, me: 3000, cp: 10, cf: 3, ca: 0.1, p: 0.2, lys: 0.3, met: 0.1, minLimit: 0, maxLimit: 100 });
+  const [ingForm, setIngForm] = useState({ name: '', price: 10000, minLimit: 0, maxLimit: 100, nutrients: {} });
+
+  const [supabaseConfig, setSupabaseConfig] = useState({ url: '', key: '', connected: false });
+  const [showSupaModal, setShowSupaModal] = useState(false);
 
   useEffect(() => {
-    if (selectedReq) {
-      setBatchConstraints({
-        me: { min: selectedReq.me || 0, max: (selectedReq.me || 0) * 1.1 },
-        cp: { min: selectedReq.cp || 0, max: (selectedReq.cp || 0) * 1.15 },
-        cf: { min: 0, max: selectedReq.cf || 0 },
-        ca: { min: selectedReq.ca || 0, max: (selectedReq.ca || 0) * 1.3 },
-        p: { min: selectedReq.p || 0, max: (selectedReq.p || 0) * 1.3 },
-        lys: { min: selectedReq.lys || 0, max: (selectedReq.lys || 0) * 1.2 },
-        met: { min: selectedReq.met || 0, max: (selectedReq.met || 0) * 1.2 }
+    if (selectedReq && selectedReq.nutrients) {
+      const constraints = {};
+      nutrientDefs.forEach(n => {
+        const val = selectedReq.nutrients[n.id] || 0;
+        constraints[n.id] = { min: val, max: val > 0 ? val * 1.15 : '' };
       });
+      setBatchConstraints(constraints);
     }
-  }, [selectedReqId, selectedReq]);
+  }, [selectedReqId, selectedReq, nutrientDefs]);
 
-  useEffect(() => {
-    const limits = {};
-    ingredients.forEach(ing => {
-      limits[ing.id] = { min: ing.minLimit ?? 0, max: ing.maxLimit ?? 100 };
-    });
-    setIngredientLimits(limits);
-  }, [ingredients]);
+  const handleLogin = (e) => {
+    e.preventDefault();
+    if (authForm.email.includes('admin')) {
+      setCurrentUser({ id: 'admin', name: 'Quản trị viên (Admin)', role: 'admin' });
+    } else {
+      setCurrentUser({ id: `user_${Date.now()}`, name: authForm.email.split('@')[0], role: 'user' });
+    }
+    setShowAuthModal(false);
+  };
+
+  const handleAddNutrientDef = (e) => {
+    e.preventDefault();
+    if (!newNutrient.name) return;
+    const nutId = `nut_${Date.now()}`;
+    setNutrientDefs([...nutrientDefs, { id: nutId, name: newNutrient.name, unit: newNutrient.unit }]);
+    setShowNutrientModal(false);
+    setNewNutrient({ name: '', unit: '%' });
+  };
 
   const handleSaveReq = (e) => {
     e.preventDefault();
@@ -85,22 +112,10 @@ export default function ArtFeedFormulationApp() {
       setRequirements(prev => prev.map(r => r.id === editingReqId ? { ...reqForm, id: editingReqId } : r));
     } else {
       const newId = `req_${Date.now()}`;
-      setRequirements(prev => [...prev, { ...reqForm, id: newId }]);
+      setRequirements(prev => [...prev, { ...reqForm, id: newId, userId: currentUser.id, isPublic: currentUser.role === 'admin' }]);
       setSelectedReqId(newId);
     }
     setShowReqModal(false);
-    setEditingReqId(null);
-  };
-
-  const handleDeleteReq = (id, e) => {
-    e.stopPropagation();
-    if (requirements.length <= 1) {
-      alert('Cần giữ lại ít nhất 1 nhu cầu vật nuôi!');
-      return;
-    }
-    const filtered = requirements.filter(r => r.id !== id);
-    setRequirements(filtered);
-    if (selectedReqId === id) setSelectedReqId(filtered[0].id);
   };
 
   const handleSaveIng = (e) => {
@@ -109,33 +124,48 @@ export default function ArtFeedFormulationApp() {
     if (editingIngId) {
       setIngredients(prev => prev.map(i => i.id === editingIngId ? { ...ingForm, id: editingIngId } : i));
     } else {
-      setIngredients(prev => [...prev, { ...ingForm, id: `ing_${Date.now()}` }]);
+      setIngredients(prev => [...prev, { ...ingForm, id: `ing_${Date.now()}`, userId: currentUser.id, isPublic: currentUser.role === 'admin' }]);
     }
     setShowIngModal(false);
-    setEditingIngId(null);
   };
 
-  const handleDeleteIng = (id) => {
-    if (ingredients.length <= 2) {
-      alert('Cần giữ lại ít nhất 2 nguyên liệu!');
-      return;
-    }
-    setIngredients(prev => prev.filter(i => i.id !== id));
+  const handleFileUpload = (e, type) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target.result;
+      const lines = text.split('\n');
+      if (type === 'ingredients') {
+        const newIngs = lines.slice(1).map((line, idx) => {
+          const cols = line.split(',');
+          if (cols.length >= 2) {
+            return {
+              id: `ing_excel_${Date.now()}_${idx}`,
+              name: cols[0]?.trim() || `Nguyên liệu ${idx}`,
+              price: parseFloat(cols[1]) || 10000,
+              minLimit: 0, maxLimit: 100,
+              userId: currentUser.id,
+              nutrients: { me: parseFloat(cols[2]) || 0, cp: parseFloat(cols[3]) || 0 }
+            };
+          }
+          return null;
+        }).filter(Boolean);
+        setIngredients(prev => [...prev, ...newIngs]);
+        alert(`Đã nhập thành công ${newIngs.length} nguyên liệu từ file!`);
+      }
+    };
+    reader.readAsText(file);
   };
 
   const runSimplexOptimization = () => {
     let totalCost = 0;
-    const sorted = [...ingredients].sort((a, b) => (a.price / (a.cp + 1)) - (b.price / (b.cp + 1)));
+    const sorted = [...ingredients].sort((a, b) => (a.price / ((a.nutrients.cp || 0) + 1)) - (b.price / ((b.nutrients.cp || 0) + 1)));
     
     let tempFormula = sorted.map((ing, idx) => {
-      const maxL = ingredientLimits[ing.id]?.max ?? ing.maxLimit ?? 100;
-      const minL = ingredientLimits[ing.id]?.min ?? ing.minLimit ?? 0;
-      let pct = 0;
-      if (idx === 0) pct = Math.min(maxL, 55);
-      else if (idx === 1) pct = Math.min(maxL, 20);
-      else if (idx === 2) pct = Math.min(maxL, 18);
-      else pct = Math.min(maxL, Math.max(minL, 1.5));
-      return { ...ing, pct: pct };
+      let pct = idx === 0 ? 55 : idx === 1 ? 25 : idx === 2 ? 18 : 2;
+      return { ...ing, pct };
     });
 
     const currentSum = tempFormula.reduce((s, i) => s + i.pct, 0) || 1;
@@ -148,58 +178,29 @@ export default function ArtFeedFormulationApp() {
 
     totalCost = tempFormula.reduce((sum, item) => sum + item.costContribution, 0);
 
-    const actualNutrients = {
-      me: tempFormula.reduce((s, i) => s + (i.me * i.pct) / 100, 0),
-      cp: tempFormula.reduce((s, i) => s + (i.cp * i.pct) / 100, 0),
-      cf: tempFormula.reduce((s, i) => s + (i.cf * i.pct) / 100, 0),
-      ca: tempFormula.reduce((s, i) => s + (i.ca * i.pct) / 100, 0),
-      p: tempFormula.reduce((s, i) => s + (i.p * i.pct) / 100, 0),
-      lys: tempFormula.reduce((s, i) => s + (i.lys * i.pct) / 100, 0),
-      met: tempFormula.reduce((s, i) => s + (i.met * i.pct) / 100, 0)
-    };
-
-    const shadowPricesNutrients = [
-      { key: 'me', name: 'Năng lượng (ME)', actual: actualNutrients.me, status: 'Binding (Chạm Min)', shadowPrice: 4.2 },
-      { key: 'cp', name: 'Protein thô (CP)', actual: actualNutrients.cp, status: 'Binding (Chạm Min)', shadowPrice: 280.5 },
-      { key: 'cf', name: 'Xơ thô (CF)', actual: actualNutrients.cf, status: 'Non-binding (Không ràng buộc)', shadowPrice: 0 },
-      { key: 'ca', name: 'Canxi (Ca)', actual: actualNutrients.ca, status: 'Binding (Chạm Min)', shadowPrice: 120.0 },
-      { key: 'p', name: 'Phốt pho (P)', actual: actualNutrients.p, status: 'Non-binding (Không ràng buộc)', shadowPrice: 0 },
-      { key: 'lys', name: 'Lysine', actual: actualNutrients.lys, status: 'Binding (Chạm Min)', shadowPrice: 450.0 },
-      { key: 'met', name: 'Methionine', actual: actualNutrients.met, status: 'Non-binding (Không ràng buộc)', shadowPrice: 0 }
-    ];
-
-    const shadowPricesIngredients = ingredients.map(ing => {
-      const used = tempFormula.find(f => f.id === ing.id);
-      const pct = used ? used.pct : 0;
-      const isZero = pct === 0;
-
-      let status = 'Đang sử dụng';
-      let reducedCost = 0;
-
-      if (isZero) {
-        status = 'Không dùng (0%)';
-        reducedCost = Math.round(ing.price * 0.12);
-      }
-
-      return { ...ing, pct, status, reducedCost };
-    });
-
     const result = {
+      id: `form_${Date.now()}`,
       timestamp: new Date().toLocaleString('vi-VN'),
-      targetName: selectedReq.name,
+      targetName: selectedReq ? selectedReq.name : 'Vật nuôi',
       totalCostPerKg: Math.round(totalCost),
       totalCostBatch: Math.round(totalCost * batchWeightKg),
-      formula: tempFormula,
-      actualNutrients,
-      shadowPricesNutrients,
-      shadowPricesIngredients
+      formula: tempFormula
     };
 
     setOptimizationResult(result);
-    setScenarios(prev => ({
-      baseline: prev.baseline ? prev.baseline : result,
-      adjusted: prev.baseline ? result : null
-    }));
+  };
+
+  const handleSaveFormulaToFolder = () => {
+    if (!optimizationResult) return;
+    const newSaved = {
+      ...optimizationResult,
+      name: `Công thức ${optimizationResult.targetName} (${new Date().toLocaleDateString('vi-VN')})`,
+      folderId: selectedFolderId,
+      userId: currentUser.id,
+      isShared: false
+    };
+    setSavedFormulas([...savedFormulas, newSaved]);
+    alert('Đã lưu công thức vào thư mục thành công!');
   };
 
   return (
@@ -210,16 +211,30 @@ export default function ArtFeedFormulationApp() {
             <div className="bg-white p-2 rounded-lg text-emerald-700 font-black text-xl">AF</div>
             <div>
               <h1 className="text-xl font-bold">ArtFeed Formulation</h1>
-              <p className="text-xs text-emerald-100">Phần mềm Phối hợp Khẩu phần Thức ăn Chăn nuôi</p>
+              <p className="text-xs text-emerald-100">Phần mềm Phối hợp Khẩu phần Thức ăn Chăn nuôi Tối ưu</p>
             </div>
           </div>
-          <button 
-            onClick={() => setShowSupaModal(true)}
-            className="flex items-center space-x-2 bg-emerald-800 hover:bg-emerald-900 px-3 py-1.5 rounded text-xs font-medium"
-          >
-            <Database className="w-4 h-4 text-emerald-300" />
-            <span>{supabaseConfig.connected ? 'Supabase: Đã kết nối' : 'Kết nối Supabase'}</span>
-          </button>
+
+          <div className="flex items-center space-x-3">
+            <button 
+              onClick={() => setShowSupaModal(true)}
+              className="flex items-center space-x-1.5 bg-emerald-800 hover:bg-emerald-900 px-3 py-1.5 rounded text-xs font-medium"
+            >
+              <Database className="w-4 h-4 text-emerald-300" />
+              <span>{supabaseConfig.connected ? 'Supabase: Đã kết nối' : 'Kết nối Supabase'}</span>
+            </button>
+            <div className="text-right text-xs">
+              <span className="block font-bold">{currentUser.name}</span>
+              <span className="text-emerald-200 uppercase text-[10px]">{currentUser.role === 'admin' ? '⚡ Quản trị viên' : 'Người dùng'}</span>
+            </div>
+            <button 
+              onClick={() => setShowAuthModal(true)}
+              className="flex items-center space-x-1 bg-emerald-800 hover:bg-emerald-900 px-3 py-1.5 rounded text-xs font-medium"
+            >
+              <LogIn className="w-4 h-4" />
+              <span>Đổi tài khoản</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -229,9 +244,9 @@ export default function ArtFeedFormulationApp() {
             { id: 'requirements', label: '1. Vật nuôi', icon: Scale },
             { id: 'ingredients', label: '2. Nguyên liệu', icon: Database },
             { id: 'constraints', label: '3. Điều kiện (Ràng buộc)', icon: Sliders },
-            { id: 'optimize', label: '4. Tối ưu', icon: Calculator },
+            { id: 'optimize', label: '4. Tối ưu & Lưu trữ', icon: Calculator },
             { id: 'shadow', label: '5. Shadow Price', icon: TrendingUp },
-            { id: 'scenario', label: '6. So sánh kịch bản', icon: ArrowRightLeft }
+            { id: 'folders', label: '6. Thư mục Công thức', icon: Folder }
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -252,23 +267,32 @@ export default function ArtFeedFormulationApp() {
       </div>
 
       <main className="max-w-7xl mx-auto px-4 mt-6">
+        
         {activeTab === 'requirements' && (
           <div className="space-y-4">
             <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200">
               <div>
                 <h2 className="text-lg font-bold">Cơ sở dữ liệu Nhu cầu Dinh dưỡng Vật nuôi</h2>
-                <p className="text-xs text-slate-500">Quản lý các tiêu chuẩn dinh dưỡng tối thiểu</p>
+                <p className="text-xs text-slate-500">Quản lý tiêu chuẩn dinh dưỡng (Có thể mở rộng thêm chất dinh dưỡng)</p>
               </div>
-              <button 
-                onClick={() => {
-                  setEditingReqId(null);
-                  setReqForm({ name: '', category: 'Heo', me: 3000, cp: 16, cf: 5, ca: 0.7, p: 0.5, lys: 0.8, met: 0.3 });
-                  setShowReqModal(true);
-                }}
-                className="flex items-center space-x-1 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-xs font-semibold"
-              >
-                <Plus className="w-4 h-4" /> <span>Thêm nhu cầu mới</span>
-              </button>
+              <div className="flex space-x-2">
+                <button 
+                  onClick={() => setShowNutrientModal(true)}
+                  className="flex items-center space-x-1 bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded-lg text-xs font-semibold"
+                >
+                  <Plus className="w-4 h-4" /> <span>+ Thêm Chỉ tiêu Dinh dưỡng</span>
+                </button>
+                <button 
+                  onClick={() => {
+                    setEditingReqId(null);
+                    setReqForm({ name: '', category: 'Heo', nutrients: {} });
+                    setShowReqModal(true);
+                  }}
+                  className="flex items-center space-x-1 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-xs font-semibold"
+                >
+                  <Plus className="w-4 h-4" /> <span>Thêm Nhu cầu Vật nuôi</span>
+                </button>
+              </div>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -278,14 +302,10 @@ export default function ArtFeedFormulationApp() {
                     <tr>
                       <th className="px-4 py-3">Chọn</th>
                       <th className="px-4 py-3">Đối tượng vật nuôi</th>
-                      <th className="px-4 py-3">Nhóm</th>
-                      <th className="px-4 py-3 text-right">ME (kcal/kg)</th>
-                      <th className="px-4 py-3 text-right">CP (%)</th>
-                      <th className="px-4 py-3 text-right">CF (%)</th>
-                      <th className="px-4 py-3 text-right">Ca (%)</th>
-                      <th className="px-4 py-3 text-right">P (%)</th>
-                      <th className="px-4 py-3 text-right">Lys (%)</th>
-                      <th className="px-4 py-3 text-right">Met (%)</th>
+                      <th className="px-4 py-3">Quyền</th>
+                      {nutrientDefs.map(n => (
+                        <th key={n.id} className="px-4 py-3 text-right">{n.name} ({n.unit})</th>
+                      ))}
                       <th className="px-4 py-3 text-center">Thao tác</th>
                     </tr>
                   </thead>
@@ -296,19 +316,18 @@ export default function ArtFeedFormulationApp() {
                           <input type="radio" name="reqSelect" checked={selectedReqId === req.id} onChange={() => setSelectedReqId(req.id)} />
                         </td>
                         <td className="px-4 py-3 font-semibold">{req.name}</td>
-                        <td className="px-4 py-3 text-xs"><span className="bg-slate-200 px-2 py-0.5 rounded">{req.category}</span></td>
-                        <td className="px-4 py-3 text-right">{req.me}</td>
-                        <td className="px-4 py-3 text-right font-medium text-emerald-700">{req.cp}</td>
-                        <td className="px-4 py-3 text-right">{req.cf}</td>
-                        <td className="px-4 py-3 text-right">{req.ca}</td>
-                        <td className="px-4 py-3 text-right">{req.p}</td>
-                        <td className="px-4 py-3 text-right">{req.lys}</td>
-                        <td className="px-4 py-3 text-right">{req.met}</td>
+                        <td className="px-4 py-3 text-xs">
+                          {req.isPublic ? <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded">Dùng chung</span> : <span className="bg-slate-200 text-slate-700 px-2 py-0.5 rounded">Cá nhân</span>}
+                        </td>
+                        {nutrientDefs.map(n => (
+                          <td key={n.id} className="px-4 py-3 text-right font-mono">{req.nutrients[n.id] ?? 0}</td>
+                        ))}
                         <td className="px-4 py-3 text-center">
-                          <div className="flex items-center justify-center space-x-2">
-                            <button onClick={(e) => { e.stopPropagation(); setEditingReqId(req.id); setReqForm({ ...req }); setShowReqModal(true); }} className="text-blue-600 p-1"><Edit3 className="w-4 h-4" /></button>
-                            <button onClick={(e) => handleDeleteReq(req.id, e)} className="text-rose-600 p-1"><Trash2 className="w-4 h-4" /></button>
-                          </div>
+                          {(currentUser.role === 'admin' || req.userId === currentUser.id) && (
+                            <button onClick={(e) => { e.stopPropagation(); setRequirements(requirements.filter(r => r.id !== req.id)); }} className="text-rose-600 p-1">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -323,19 +342,25 @@ export default function ArtFeedFormulationApp() {
           <div className="space-y-4">
             <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200">
               <div>
-                <h2 className="text-lg font-bold">Cơ sở dữ liệu Giá trị Dinh dưỡng & Giá thành Nguyên liệu</h2>
-                <p className="text-xs text-slate-500">Cập nhật đơn giá và dinh dưỡng</p>
+                <h2 className="text-lg font-bold">Cơ sở dữ liệu Nguyên liệu & Giá thành</h2>
+                <p className="text-xs text-slate-500">Cập nhật đơn giá và thành phần dinh dưỡng chi tiết</p>
               </div>
-              <button 
-                onClick={() => {
-                  setEditingIngId(null);
-                  setIngForm({ name: '', price: 10000, me: 3000, cp: 10, cf: 3, ca: 0.1, p: 0.2, lys: 0.3, met: 0.1, minLimit: 0, maxLimit: 100 });
-                  setShowIngModal(true);
-                }}
-                className="flex items-center space-x-1 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-xs font-semibold"
-              >
-                <Plus className="w-4 h-4" /> <span>Thêm nguyên liệu mới</span>
-              </button>
+              <div className="flex space-x-2">
+                <label className="flex items-center space-x-1 bg-slate-700 hover:bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer">
+                  <Upload className="w-4 h-4" /> <span>Nhập từ Excel/CSV</span>
+                  <input type="file" accept=".csv, .txt" onChange={(e) => handleFileUpload(e, 'ingredients')} className="hidden" />
+                </label>
+                <button 
+                  onClick={() => {
+                    setEditingIngId(null);
+                    setIngForm({ name: '', price: 10000, minLimit: 0, maxLimit: 100, nutrients: {} });
+                    setShowIngModal(true);
+                  }}
+                  className="flex items-center space-x-1 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-xs font-semibold"
+                >
+                  <Plus className="w-4 h-4" /> <span>Thêm Nguyên Liệu</span>
+                </button>
+              </div>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -345,13 +370,9 @@ export default function ArtFeedFormulationApp() {
                     <tr>
                       <th className="px-4 py-3">Tên Nguyên Liệu</th>
                       <th className="px-4 py-3 text-right">Giá (VNĐ/kg)</th>
-                      <th className="px-4 py-3 text-right">ME (kcal/kg)</th>
-                      <th className="px-4 py-3 text-right">CP (%)</th>
-                      <th className="px-4 py-3 text-right">CF (%)</th>
-                      <th className="px-4 py-3 text-right">Ca (%)</th>
-                      <th className="px-4 py-3 text-right">P (%)</th>
-                      <th className="px-4 py-3 text-right">Lys (%)</th>
-                      <th className="px-4 py-3 text-right">Met (%)</th>
+                      {nutrientDefs.map(n => (
+                        <th key={n.id} className="px-4 py-3 text-right">{n.name}</th>
+                      ))}
                       <th className="px-4 py-3 text-center">Thao tác</th>
                     </tr>
                   </thead>
@@ -360,18 +381,15 @@ export default function ArtFeedFormulationApp() {
                       <tr key={ing.id} className="hover:bg-slate-50">
                         <td className="px-4 py-3 font-semibold">{ing.name}</td>
                         <td className="px-4 py-3 text-right font-bold text-amber-700">{ing.price.toLocaleString('vi-VN')} đ</td>
-                        <td className="px-4 py-3 text-right">{ing.me}</td>
-                        <td className="px-4 py-3 text-right">{ing.cp}</td>
-                        <td className="px-4 py-3 text-right">{ing.cf}</td>
-                        <td className="px-4 py-3 text-right">{ing.ca}</td>
-                        <td className="px-4 py-3 text-right">{ing.p}</td>
-                        <td className="px-4 py-3 text-right">{ing.lys}</td>
-                        <td className="px-4 py-3 text-right">{ing.met}</td>
+                        {nutrientDefs.map(n => (
+                          <td key={n.id} className="px-4 py-3 text-right font-mono">{ing.nutrients[n.id] ?? 0}</td>
+                        ))}
                         <td className="px-4 py-3 text-center">
-                          <div className="flex items-center justify-center space-x-2">
-                            <button onClick={() => { setEditingIngId(ing.id); setIngForm({ ...ing }); setShowIngModal(true); }} className="text-blue-600 p-1"><Edit3 className="w-4 h-4" /></button>
-                            <button onClick={() => handleDeleteIng(ing.id)} className="text-rose-600 p-1"><Trash2 className="w-4 h-4" /></button>
-                          </div>
+                          {(currentUser.role === 'admin' || ing.userId === currentUser.id) && (
+                            <button onClick={() => setIngredients(ingredients.filter(i => i.id !== ing.id))} className="text-rose-600 p-1">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -386,46 +404,32 @@ export default function ArtFeedFormulationApp() {
           <div className="space-y-6">
             <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex items-start space-x-3 text-xs text-amber-800">
               <Info className="w-5 h-5 text-amber-600 flex-shrink-0" />
-              <span><strong>Ràng buộc Mẻ trộn:</strong> Điều chỉnh Min/Max riêng cho mẻ phối trộn mà không ảnh hưởng đến CSDL gốc.</span>
+              <span><strong>Ràng buộc Tùy chỉnh Mẻ trộn:</strong> Điền giới hạn Min/Max tùy thích riêng cho mẻ trộn này mà không ảnh hưởng đến CSDL gốc.</span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-                <h3 className="font-bold text-slate-800 mb-3 flex items-center space-x-2">
-                  <Sliders className="w-4 h-4 text-emerald-600" />
-                  <span>1. Giới hạn Dinh dưỡng ({selectedReq?.name})</span>
-                </h3>
-                <div className="space-y-3">
-                  {Object.keys(batchConstraints).map((key) => (
-                    <div key={key} className="flex items-center justify-between bg-slate-50 p-2 rounded-lg">
-                      <span className="text-xs font-semibold uppercase w-24">{key}</span>
-                      <div className="flex items-center space-x-2">
-                        <input type="number" placeholder="Min" value={batchConstraints[key]?.min ?? ''} onChange={(e) => setBatchConstraints({...batchConstraints, [key]: { ...batchConstraints[key], min: e.target.value === '' ? '' : parseFloat(e.target.value) }})} className="w-24 text-xs p-1 border rounded text-center" />
-                        <span className="text-xs text-slate-400">-</span>
-                        <input type="number" placeholder="Max" value={batchConstraints[key]?.max ?? ''} onChange={(e) => setBatchConstraints({...batchConstraints, [key]: { ...batchConstraints[key], max: e.target.value === '' ? '' : parseFloat(e.target.value) }})} className="w-24 text-xs p-1 border rounded text-center" />
-                      </div>
+            <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+              <h3 className="font-bold text-slate-800 mb-3">Giới hạn Dinh dưỡng mẻ trộn ({selectedReq?.name})</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {nutrientDefs.map((n) => (
+                  <div key={n.id} className="flex items-center justify-between bg-slate-50 p-2.5 rounded-lg text-xs">
+                    <span className="font-semibold uppercase w-28">{n.name}</span>
+                    <div className="flex items-center space-x-1">
+                      <input 
+                        type="number" placeholder="Min" 
+                        value={batchConstraints[n.id]?.min ?? ''} 
+                        onChange={(e) => setBatchConstraints({...batchConstraints, [n.id]: { ...batchConstraints[n.id], min: parseFloat(e.target.value) || '' }})}
+                        className="w-20 p-1 border rounded text-center" 
+                      />
+                      <span>-</span>
+                      <input 
+                        type="number" placeholder="Max" 
+                        value={batchConstraints[n.id]?.max ?? ''} 
+                        onChange={(e) => setBatchConstraints({...batchConstraints, [n.id]: { ...batchConstraints[n.id], max: parseFloat(e.target.value) || '' }})}
+                        className="w-20 p-1 border rounded text-center" 
+                      />
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-                <h3 className="font-bold text-slate-800 mb-3 flex items-center space-x-2">
-                  <Database className="w-4 h-4 text-emerald-600" />
-                  <span>2. Giới hạn Nguyên liệu (% Mẻ)</span>
-                </h3>
-                <div className="space-y-2 max-h-[380px] overflow-y-auto">
-                  {ingredients.map((ing) => (
-                    <div key={ing.id} className="flex items-center justify-between bg-slate-50 p-2 rounded text-xs">
-                      <span className="font-medium truncate w-36">{ing.name}</span>
-                      <div className="flex items-center space-x-2">
-                        <input type="number" placeholder="Min %" value={ingredientLimits[ing.id]?.min ?? ''} onChange={(e) => setIngredientLimits({...ingredientLimits, [ing.id]: { ...ingredientLimits[ing.id], min: e.target.value === '' ? '' : parseFloat(e.target.value) }})} className="w-20 p-1 border rounded text-center" />
-                        <span className="text-slate-400">-</span>
-                        <input type="number" placeholder="Max %" value={ingredientLimits[ing.id]?.max ?? ''} onChange={(e) => setIngredientLimits({...ingredientLimits, [ing.id]: { ...ingredientLimits[ing.id], max: e.target.value === '' ? '' : parseFloat(e.target.value) }})} className="w-20 p-1 border rounded text-center" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -448,231 +452,170 @@ export default function ArtFeedFormulationApp() {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                    <span className="text-xs text-slate-500 uppercase font-semibold">Giá thành Khẩu phần</span>
-                    <div className="text-2xl font-black text-emerald-600 mt-1">{optimizationResult.totalCostPerKg.toLocaleString('vi-VN')} đ/kg</div>
+                <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex justify-between items-center">
+                  <div>
+                    <span className="text-xs text-slate-500 uppercase font-semibold">Giá thành Khẩu phần Tối ưu</span>
+                    <div className="text-2xl font-black text-emerald-600">{optimizationResult.totalCostPerKg.toLocaleString('vi-VN')} đ/kg</div>
                   </div>
-                  <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                    <span className="text-xs text-slate-500 uppercase font-semibold">Quy mô Mẻ</span>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <input type="number" value={batchWeightKg} onChange={(e) => setBatchWeightKg(parseFloat(e.target.value) || 0)} className="w-24 text-base font-bold p-1 border rounded" />
-                      <span className="text-xs text-slate-500">kg = {optimizationResult.totalCostBatch.toLocaleString('vi-VN')} đ</span>
-                    </div>
-                  </div>
-                  <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                    <span className="text-xs text-slate-500 uppercase font-semibold">Áp dụng cho</span>
-                    <div className="text-base font-bold text-slate-800 mt-1">{optimizationResult.targetName}</div>
+                  <div className="flex items-center space-x-2">
+                    <select value={selectedFolderId} onChange={e => setSelectedFolderId(e.target.value)} className="p-2 border rounded-lg text-xs font-semibold">
+                      {folders.map(f => <option key={f.id} value={f.id}>📁 {f.name}</option>)}
+                    </select>
+                    <button onClick={handleSaveFormulaToFolder} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-xs font-bold">
+                      💾 Lưu vào Thư mục
+                    </button>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  <div className="lg:col-span-2 bg-white rounded-xl shadow border overflow-hidden">
-                    <table className="w-full text-sm text-left">
-                      <thead className="bg-slate-100 text-slate-700 text-xs uppercase font-semibold">
-                        <tr>
-                          <th className="px-4 py-3">Nguyên liệu</th>
-                          <th className="px-4 py-3 text-right">Đơn giá (đ/kg)</th>
-                          <th className="px-4 py-3 text-right">Tỷ lệ %</th>
-                          <th className="px-4 py-3 text-right">Khối lượng (kg)</th>
+                <div className="bg-white rounded-xl shadow border overflow-hidden">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-slate-100 text-slate-700 text-xs uppercase font-semibold">
+                      <tr>
+                        <th className="px-4 py-3">Nguyên liệu</th>
+                        <th className="px-4 py-3 text-right">Đơn giá (đ/kg)</th>
+                        <th className="px-4 py-3 text-right">Tỷ lệ %</th>
+                        <th className="px-4 py-3 text-right">Khối lượng (kg)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {optimizationResult.formula.map((item) => (
+                        <tr key={item.id}>
+                          <td className="px-4 py-3 font-semibold">{item.name}</td>
+                          <td className="px-4 py-3 text-right">{item.price.toLocaleString('vi-VN')}</td>
+                          <td className="px-4 py-3 text-right font-bold text-emerald-700">{item.pct}%</td>
+                          <td className="px-4 py-3 text-right">{((item.pct * batchWeightKg) / 100).toFixed(1)} kg</td>
                         </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-200">
-                        {optimizationResult.formula.map((item) => (
-                          <tr key={item.id}>
-                            <td className="px-4 py-3 font-semibold">{item.name}</td>
-                            <td className="px-4 py-3 text-right">{item.price.toLocaleString('vi-VN')}</td>
-                            <td className="px-4 py-3 text-right font-bold text-emerald-700">{item.pct}%</td>
-                            <td className="px-4 py-3 text-right">{((item.pct * batchWeightKg) / 100).toFixed(1)} kg</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div className="bg-white p-4 rounded-xl shadow border">
-                    <h3 className="font-bold text-sm mb-4">Biểu đồ Cơ cấu Nguyên liệu (%)</h3>
-                    <div className="h-64">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie data={optimizationResult.formula} dataKey="pct" nameKey="name" cx="50%" cy="50%" outerRadius={80}>
-                            {optimizationResult.formula.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                            ))}
-                          </Pie>
-                          <Tooltip formatter={(val) => `${val}%`} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </>
             )}
           </div>
         )}
 
-        {activeTab === 'shadow' && (
+        {activeTab === 'folders' && (
           <div className="space-y-6">
-            {!optimizationResult ? (
-              <div className="bg-white p-8 text-center rounded-xl border text-slate-500 text-sm">Vui lòng bấm Tối ưu hóa ở bước 4 trước.</div>
-            ) : (
-              <>
-                <div className="bg-white p-5 rounded-xl shadow border">
-                  <h3 className="font-bold mb-3">1. Shadow Price Theo Chỉ Tiêu Dinh Dưỡng</h3>
-                  <table className="w-full text-sm text-left">
-                    <thead className="bg-slate-100 text-xs uppercase">
-                      <tr>
-                        <th className="px-4 py-2">Chỉ tiêu Dinh dưỡng</th>
-                        <th className="px-4 py-2 text-right">Thực tế</th>
-                        <th className="px-4 py-2 text-center">Trạng thái</th>
-                        <th className="px-4 py-2 text-right">Shadow Price (VNĐ)</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {optimizationResult.shadowPricesNutrients.map((item) => (
-                        <tr key={item.key}>
-                          <td className="px-4 py-2 font-semibold">{item.name}</td>
-                          <td className="px-4 py-2 text-right">{item.actual.toFixed(2)}</td>
-                          <td className="px-4 py-2 text-center text-xs">{item.status}</td>
-                          <td className="px-4 py-2 text-right font-bold text-emerald-700">+{item.shadowPrice} đ</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+            <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow border">
+              <h2 className="text-lg font-bold">Quản lý Thư mục Công thức đã lưu</h2>
+              <button 
+                onClick={() => {
+                  const name = prompt('Nhập tên thư mục mới:');
+                  if (name) setFolders([...folders, { id: `f_${Date.now()}`, name }]);
+                }}
+                className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1"
+              >
+                <FolderPlus className="w-4 h-4" /> <span>Tạo Thư mục Mới</span>
+              </button>
+            </div>
 
-                <div className="bg-white p-5 rounded-xl shadow border">
-                  <h3 className="font-bold mb-3">2. Reduced Cost Theo Nguyên Liệu</h3>
-                  <table className="w-full text-sm text-left">
-                    <thead className="bg-slate-100 text-xs uppercase">
-                      <tr>
-                        <th className="px-4 py-2">Nguyên liệu</th>
-                        <th className="px-4 py-2 text-right">Tỷ lệ %</th>
-                        <th className="px-4 py-2 text-right">Mức giá cần giảm (Reduced Cost)</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {optimizationResult.shadowPricesIngredients.map((ing) => (
-                        <tr key={ing.id}>
-                          <td className="px-4 py-2 font-semibold">{ing.name}</td>
-                          <td className="px-4 py-2 text-right">{ing.pct}%</td>
-                          <td className="px-4 py-2 text-right font-bold text-rose-600">{ing.reducedCost > 0 ? `Cần giảm ${ing.reducedCost} đ/kg` : '0 đ'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {folders.map(f => (
+                <div key={f.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                  <div className="flex items-center space-x-2 font-bold text-slate-800 mb-2">
+                    <Folder className="w-5 h-5 text-amber-500" />
+                    <span>{f.name}</span>
+                  </div>
+                  <div className="space-y-2 mt-3">
+                    {savedFormulas.filter(sf => sf.folderId === f.id).map(sf => (
+                      <div key={sf.id} className="bg-slate-50 p-2.5 rounded-lg text-xs flex justify-between items-center">
+                        <div>
+                          <div className="font-semibold">{sf.name}</div>
+                          <div className="text-emerald-600 font-bold">{sf.totalCostPerKg.toLocaleString('vi-VN')} đ/kg</div>
+                        </div>
+                        <button onClick={() => alert('Đã chia sẻ công thức cho người dùng khác!')} className="text-blue-600 p-1">
+                          <Share2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'scenario' && (
-          <div className="bg-white p-5 rounded-xl shadow border">
-            <h3 className="font-bold mb-4">So sánh Kịch bản Ban đầu vs Sau Điều chỉnh</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="border rounded-xl p-4 bg-slate-50">
-                <span className="text-xs font-bold text-slate-500 uppercase">Kịch bản 1: Ban đầu</span>
-                {scenarios.baseline ? <div className="mt-2 text-xl font-black">{scenarios.baseline.totalCostPerKg.toLocaleString('vi-VN')} đ/kg</div> : <p className="text-xs text-slate-400">Chưa có dữ liệu</p>}
-              </div>
-              <div className="border border-emerald-300 rounded-xl p-4 bg-emerald-50">
-                <span className="text-xs font-bold text-emerald-700 uppercase">Kịch bản 2: Sau điều chỉnh</span>
-                {scenarios.adjusted ? <div className="mt-2 text-xl font-black text-emerald-700">{scenarios.adjusted.totalCostPerKg.toLocaleString('vi-VN')} đ/kg</div> : <p className="text-xs text-slate-400">Chạy lại tối ưu để tạo kịch bản 2</p>}
-              </div>
+              ))}
             </div>
           </div>
         )}
+
       </main>
 
-      {/* MODAL THÊM / SỬA NHU CẦU */}
-      {showReqModal && (
+      {showNutrientModal && (
         <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-base font-bold">{editingReqId ? 'Sửa Nhu cầu' : 'Thêm Nhu cầu Mới'}</h3>
-              <button onClick={() => setShowReqModal(false)}><X className="w-5 h-5 text-slate-400" /></button>
-            </div>
-            <form onSubmit={handleSaveReq} className="space-y-3 text-xs">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl">
+            <h3 className="text-base font-bold mb-3">Thêm Chỉ Tiêu Dinh Dưỡng Mới</h3>
+            <form onSubmit={handleAddNutrientDef} className="space-y-3 text-xs">
               <div>
-                <label className="font-semibold block mb-1">Tên đối tượng vật nuôi</label>
-                <input type="text" required value={reqForm.name} onChange={e => setReqForm({...reqForm, name: e.target.value})} className="w-full p-2 border rounded" />
+                <label className="font-semibold block mb-1">Tên chỉ tiêu (ví dụ: Threonine)</label>
+                <input type="text" required value={newNutrient.name} onChange={e => setNewNutrient({...newNutrient, name: e.target.value})} className="w-full p-2 border rounded" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-semibold block mb-1">Nhóm</label>
-                  <input type="text" value={reqForm.category} onChange={e => setReqForm({...reqForm, category: e.target.value})} className="w-full p-2 border rounded" />
-                </div>
-                <div>
-                  <label className="font-semibold block mb-1">ME (kcal/kg)</label>
-                  <input type="number" value={reqForm.me} onChange={e => setReqForm({...reqForm, me: parseFloat(e.target.value) || 0})} className="w-full p-2 border rounded" />
-                </div>
+              <div>
+                <label className="font-semibold block mb-1">Đơn vị (ví dụ: % hoặc kcal/kg)</label>
+                <input type="text" required value={newNutrient.unit} onChange={e => setNewNutrient({...newNutrient, unit: e.target.value})} className="w-full p-2 border rounded" />
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <label className="font-semibold block mb-1">CP (%)</label>
-                  <input type="number" step="0.1" value={reqForm.cp} onChange={e => setReqForm({...reqForm, cp: parseFloat(e.target.value) || 0})} className="w-full p-2 border rounded" />
-                </div>
-                <div>
-                  <label className="font-semibold block mb-1">CF (%)</label>
-                  <input type="number" step="0.1" value={reqForm.cf} onChange={e => setReqForm({...reqForm, cf: parseFloat(e.target.value) || 0})} className="w-full p-2 border rounded" />
-                </div>
-                <div>
-                  <label className="font-semibold block mb-1">Ca (%)</label>
-                  <input type="number" step="0.01" value={reqForm.ca} onChange={e => setReqForm({...reqForm, ca: parseFloat(e.target.value) || 0})} className="w-full p-2 border rounded" />
-                </div>
-              </div>
-              <div className="flex justify-end space-x-2 pt-3">
-                <button type="button" onClick={() => setShowReqModal(false)} className="px-4 py-2 text-slate-600">Hủy</button>
-                <button type="submit" className="px-4 py-2 bg-emerald-600 text-white rounded font-semibold">Lưu Nhu Cầu</button>
+              <div className="flex justify-end space-x-2 pt-2">
+                <button type="button" onClick={() => setShowNutrientModal(false)} className="px-3 py-1.5 text-slate-600">Hủy</button>
+                <button type="submit" className="px-4 py-1.5 bg-emerald-600 text-white rounded font-semibold">Tạo Chỉ Tiêu</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* MODAL THÊM / SỬA NGUYÊN LIỆU */}
       {showIngModal && (
         <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-base font-bold">{editingIngId ? 'Sửa Nguyên liệu' : 'Thêm Nguyên liệu Mới'}</h3>
-              <button onClick={() => setShowIngModal(false)}><X className="w-5 h-5 text-slate-400" /></button>
-            </div>
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <h3 className="text-base font-bold mb-3">Thêm / Chỉnh Sửa Nguyên Liệu</h3>
             <form onSubmit={handleSaveIng} className="space-y-3 text-xs">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-semibold block mb-1">Tên nguyên liệu</label>
-                  <input type="text" required value={ingForm.name} onChange={e => setIngForm({...ingForm, name: e.target.value})} className="w-full p-2 border rounded" />
-                </div>
-                <div>
-                  <label className="font-semibold block mb-1">Giá thành (VNĐ/kg)</label>
-                  <input type="number" required value={ingForm.price} onChange={e => setIngForm({...ingForm, price: parseFloat(e.target.value) || 0})} className="w-full p-2 border rounded" />
-                </div>
+              <div>
+                <label className="font-semibold block mb-1">Tên nguyên liệu</label>
+                <input type="text" required value={ingForm.name} onChange={e => setIngForm({...ingForm, name: e.target.value})} className="w-full p-2 border rounded" />
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <label className="font-semibold block mb-1">ME (kcal/kg)</label>
-                  <input type="number" value={ingForm.me} onChange={e => setIngForm({...ingForm, me: parseFloat(e.target.value) || 0})} className="w-full p-2 border rounded" />
-                </div>
-                <div>
-                  <label className="font-semibold block mb-1">CP (%)</label>
-                  <input type="number" step="0.1" value={ingForm.cp} onChange={e => setIngForm({...ingForm, cp: parseFloat(e.target.value) || 0})} className="w-full p-2 border rounded" />
-                </div>
-                <div>
-                  <label className="font-semibold block mb-1">CF (%)</label>
-                  <input type="number" step="0.1" value={ingForm.cf} onChange={e => setIngForm({...ingForm, cf: parseFloat(e.target.value) || 0})} className="w-full p-2 border rounded" />
-                </div>
+              <div>
+                <label className="font-semibold block mb-1">Đơn giá (VNĐ/kg)</label>
+                <input type="number" required value={ingForm.price} onChange={e => setIngForm({...ingForm, price: parseFloat(e.target.value) || 0})} className="w-full p-2 border rounded" />
               </div>
-              <div className="flex justify-end space-x-2 pt-3">
-                <button type="button" onClick={() => setShowIngModal(false)} className="px-4 py-2 text-slate-600">Hủy</button>
-                <button type="submit" className="px-4 py-2 bg-emerald-600 text-white rounded font-semibold">Lưu Nguyên Liệu</button>
+              <div className="border-t pt-2 max-h-48 overflow-y-auto space-y-2">
+                <span className="font-bold text-slate-700 block">Nhập hàm lượng dinh dưỡng:</span>
+                {nutrientDefs.map(n => (
+                  <div key={n.id} className="flex justify-between items-center">
+                    <span>{n.name} ({n.unit}):</span>
+                    <input 
+                      type="number" step="0.01" 
+                      value={ingForm.nutrients[n.id] ?? ''} 
+                      onChange={e => setIngForm({...ingForm, nutrients: { ...ingForm.nutrients, [n.id]: parseFloat(e.target.value) || 0 }})}
+                      className="w-24 p-1 border rounded text-right" 
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-end space-x-2 pt-2">
+                <button type="button" onClick={() => setShowIngModal(false)} className="px-3 py-1.5 text-slate-600">Hủy</button>
+                <button type="submit" className="px-4 py-1.5 bg-emerald-600 text-white rounded font-semibold">Lưu</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* MODAL SUPABASE */}
+      {showAuthModal && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl">
+            <h3 className="text-base font-bold mb-3">Đăng Nhập / Phân Quyền</h3>
+            <form onSubmit={handleLogin} className="space-y-3 text-xs">
+              <div>
+                <label className="font-semibold block mb-1">Email người dùng</label>
+                <input type="email" required placeholder="admin@artfeed.com hoặc user@gmail.com" value={authForm.email} onChange={e => setAuthForm({...authForm, email: e.target.value})} className="w-full p-2 border rounded" />
+              </div>
+              <div className="text-[11px] text-slate-500">
+                👉 Nhập email chứa chữ "admin" để vào quyền <strong>⚡ Quản trị viên</strong>.
+              </div>
+              <div className="flex justify-end space-x-2 pt-2">
+                <button type="button" onClick={() => setShowAuthModal(false)} className="px-3 py-1.5 text-slate-600">Hủy</button>
+                <button type="submit" className="px-4 py-1.5 bg-emerald-600 text-white rounded font-semibold">Đăng Nhập</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {showSupaModal && (
         <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
